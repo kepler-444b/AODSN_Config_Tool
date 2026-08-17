@@ -1,0 +1,9 @@
+D:/code/QT_ConfigTool/Build/Debug/CMakeFiles/ConfigTool.dir
+D:/code/QT_ConfigTool/Build/Debug/CMakeFiles/edit_cache.dir
+D:/code/QT_ConfigTool/Build/Debug/CMakeFiles/rebuild_cache.dir
+D:/code/QT_ConfigTool/Build/Debug/CMakeFiles/list_install_components.dir
+D:/code/QT_ConfigTool/Build/Debug/CMakeFiles/install.dir
+D:/code/QT_ConfigTool/Build/Debug/CMakeFiles/install/local.dir
+D:/code/QT_ConfigTool/Build/Debug/CMakeFiles/install/strip.dir
+D:/code/QT_ConfigTool/Build/Debug/CMakeFiles/ConfigTool_autogen_timestamp_deps.dir
+D:/code/QT_ConfigTool/Build/Debug/CMakeFiles/ConfigTool_autogen.dir

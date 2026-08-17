@@ -1,0 +1,702 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ModelRelayEx</class>
+ <widget class="QWidget" name="ModelRelayEx">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>200</width>
+    <height>220</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>200</width>
+    <height>220</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>200</width>
+    <height>220</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_21">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QFrame" name="frame">
+     <property name="minimumSize">
+      <size>
+       <width>200</width>
+       <height>200</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>200</width>
+       <height>200</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QFrame {
+    border: 1px solid #C0C0C0;
+    border-radius: 4px;
+}</string>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout"/>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="addr">
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+  <widget class="QWidget" name="relay_4" native="true">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>8</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_4">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_4_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_3" native="true">
+   <property name="geometry">
+    <rect>
+     <x>104</x>
+     <y>8</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_5">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_3_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_5" native="true">
+   <property name="geometry">
+    <rect>
+     <x>12</x>
+     <y>54</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_8">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_5_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_9" native="true">
+   <property name="geometry">
+    <rect>
+     <x>12</x>
+     <y>100</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_11">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_9_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_6" native="true">
+   <property name="geometry">
+    <rect>
+     <x>58</x>
+     <y>54</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_9">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_6_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_14" native="true">
+   <property name="geometry">
+    <rect>
+     <x>58</x>
+     <y>146</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_19">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_14_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_13" native="true">
+   <property name="geometry">
+    <rect>
+     <x>12</x>
+     <y>146</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_18">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_13_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_15" native="true">
+   <property name="geometry">
+    <rect>
+     <x>104</x>
+     <y>146</y>
+     <width>86</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>86</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_20">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_15_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_8" native="true">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>54</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_3">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_8_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_11" native="true">
+   <property name="geometry">
+    <rect>
+     <x>104</x>
+     <y>100</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_16">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_11_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_10" native="true">
+   <property name="geometry">
+    <rect>
+     <x>58</x>
+     <y>100</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_10">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_10_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_1" native="true">
+   <property name="geometry">
+    <rect>
+     <x>12</x>
+     <y>8</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_7">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_1_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_7" native="true">
+   <property name="geometry">
+    <rect>
+     <x>104</x>
+     <y>54</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_7_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_2" native="true">
+   <property name="geometry">
+    <rect>
+     <x>58</x>
+     <y>8</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_6">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_2_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="relay_12" native="true">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>100</y>
+     <width>40</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>40</width>
+     <height>40</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QWidget {
+    
+    border-radius: 4px;
+	background-color: white;
+}</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_17">
+    <item row="0" column="0">
+     <widget class="QLabel" name="relay_12_state">
+      <property name="text">
+       <string>关</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

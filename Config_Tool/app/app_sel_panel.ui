@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DialogPanel</class>
+ <widget class="QDialog" name="DialogPanel">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>200</width>
+    <height>250</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>200</width>
+    <height>250</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>200</width>
+    <height>250</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="0" column="0" colspan="3">
+    <widget class="QGroupBox" name="sel_dev">
+     <property name="minimumSize">
+      <size>
+       <width>180</width>
+       <height>60</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>180</width>
+       <height>60</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"/>
+     </property>
+     <property name="title">
+      <string>选择面板类型</string>
+     </property>
+     <widget class="QRadioButton" name="panel">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>28</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>灯控面板</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="knob">
+      <property name="geometry">
+       <rect>
+        <x>93</x>
+        <y>28</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>旋钮面板</string>
+      </property>
+     </widget>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="3">
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0" colspan="2">
+      <widget class="QGroupBox" name="sel_key_num">
+       <property name="minimumSize">
+        <size>
+         <width>180</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>180</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="title">
+        <string>选择按键个数</string>
+       </property>
+       <widget class="QRadioButton" name="key_1">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>22</y>
+          <width>47</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>1key</string>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="key_2">
+        <property name="geometry">
+         <rect>
+          <x>63</x>
+          <y>22</y>
+          <width>47</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>2key</string>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="key_3">
+        <property name="geometry">
+         <rect>
+          <x>116</x>
+          <y>22</y>
+          <width>47</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>3key</string>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="key_4">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>44</y>
+          <width>47</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>4key</string>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="key_6">
+        <property name="geometry">
+         <rect>
+          <x>63</x>
+          <y>44</y>
+          <width>47</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>6key</string>
+        </property>
+       </widget>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>设备地址</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QSpinBox" name="set_addr">
+       <property name="minimumSize">
+        <size>
+         <width>50</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximum">
+        <number>99</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0">
+    <spacer name="horizontalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>44</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="2" column="1">
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>确认</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <spacer name="horizontalSpacer_3">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>47</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

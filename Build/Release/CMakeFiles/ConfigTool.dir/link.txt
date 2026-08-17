@@ -1,0 +1,3 @@
+D:\Qt\Tools\CMake_64\bin\cmake.exe -E rm -f CMakeFiles\ConfigTool.dir/objects.a
+D:\Qt\Tools\mingw1310_64\bin\ar.exe qc CMakeFiles\ConfigTool.dir/objects.a @CMakeFiles\ConfigTool.dir\objects1.rsp
+D:\Qt\Tools\mingw1310_64\bin\g++.exe -O3 -DNDEBUG -mwindows -Wl,--whole-archive CMakeFiles\ConfigTool.dir/objects.a -Wl,--no-whole-archive -o ConfigTool.exe -Wl,--out-implib,libConfigTool.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\ConfigTool.dir\linkLibs.rsp
