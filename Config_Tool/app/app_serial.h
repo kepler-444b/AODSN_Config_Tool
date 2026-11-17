@@ -21,7 +21,6 @@
 #define FRAME_TAIL_2 0x0A
 
 
-
 namespace Ui {
 class AppSerial;
 }
@@ -46,8 +45,8 @@ signals:
 
 private slots:
 
-    void on_baudrate_currentIndexChanged(const QString &arg1);
-    void on_com_currentIndexChanged(const QString &arg1);
+    void on_baudrate_currentIndexChanged(int index);
+    void on_com_currentTextChanged(const QString &arg1);
     void on_refresh_com_clicked();
     void on_switch_com_clicked();
 

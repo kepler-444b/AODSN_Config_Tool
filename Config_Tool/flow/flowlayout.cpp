@@ -74,15 +74,15 @@ QSize FlowLayout::minimumSize() const
 int FlowLayout::horizontalSpacing() const
 {
     return (m_hSpace >= 0)
-            ? m_hSpace
-            : smartSpacing(QStyle::PM_LayoutHorizontalSpacing);
+               ? m_hSpace
+               : smartSpacing(QStyle::PM_LayoutHorizontalSpacing);
 }
 
 int FlowLayout::verticalSpacing() const
 {
     return (m_vSpace >= 0)
-            ? m_vSpace
-            : smartSpacing(QStyle::PM_LayoutVerticalSpacing);
+               ? m_vSpace
+               : smartSpacing(QStyle::PM_LayoutVerticalSpacing);
 }
 
 void FlowLayout::setGeometry(const QRect &rect)
@@ -92,8 +92,7 @@ void FlowLayout::setGeometry(const QRect &rect)
     int h = doLayout(rect, false);
 
     // ⭐⭐⭐关键修复：让QScrollArea知道内容高度变了
-    if (QWidget *w = parentWidget())
-    {
+    if (QWidget *w = parentWidget()) {
         w->setMinimumHeight(h);
     }
 }
@@ -105,33 +104,30 @@ int FlowLayout::doLayout(const QRect &rect, bool testOnly) const
 
     QRect effectiveRect = rect.adjusted(left, top, -right, -bottom);
 
-    int x = effectiveRect.x();
-    int y = effectiveRect.y();
+    int x          = effectiveRect.x();
+    int y          = effectiveRect.y();
     int lineHeight = 0;
 
     const int spaceX = horizontalSpacing();
     const int spaceY = verticalSpacing();
 
-    for (QLayoutItem *item : itemList)
-    {
+    for (QLayoutItem *item : itemList) {
         QSize itemSize = item->sizeHint();
 
         int nextX = x + itemSize.width() + spaceX;
 
-        if (nextX - spaceX > effectiveRect.right() && lineHeight > 0)
-        {
+        if (nextX - spaceX > effectiveRect.right() && lineHeight > 0) {
             x = effectiveRect.x();
             y += lineHeight + spaceY;
-            nextX = x + itemSize.width() + spaceX;
+            nextX      = x + itemSize.width() + spaceX;
             lineHeight = 0;
         }
 
-        if (!testOnly)
-        {
+        if (!testOnly) {
             item->setGeometry(QRect(QPoint(x, y), itemSize));
         }
 
-        x = nextX;
+        x          = nextX;
         lineHeight = qMax(lineHeight, itemSize.height());
     }
 
@@ -144,13 +140,10 @@ int FlowLayout::smartSpacing(QStyle::PixelMetric pm) const
     if (!parent)
         return -1;
 
-    if (parent->isWidgetType())
-    {
+    if (parent->isWidgetType()) {
         QWidget *pw = static_cast<QWidget *>(parent);
         return pw->style()->pixelMetric(pm, nullptr, pw);
-    }
-    else
-    {
+    } else {
         return static_cast<QLayout *>(parent)->spacing();
     }
 }

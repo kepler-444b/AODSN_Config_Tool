@@ -31,14 +31,20 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_2">
+  <layout class="QGridLayout" name="gridLayout_3">
    <item row="0" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QPushButton" name="new_data">
+       <property name="minimumSize">
+        <size>
+         <width>37</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="maximumSize">
         <size>
-         <width>40</width>
+         <width>37</width>
          <height>23</height>
         </size>
        </property>
@@ -49,9 +55,15 @@
      </item>
      <item>
       <widget class="QPushButton" name="load_data">
+       <property name="minimumSize">
+        <size>
+         <width>37</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="maximumSize">
         <size>
-         <width>40</width>
+         <width>37</width>
          <height>23</height>
         </size>
        </property>
@@ -62,9 +74,15 @@
      </item>
      <item>
       <widget class="QPushButton" name="save_data">
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="maximumSize">
         <size>
-         <width>40</width>
+         <width>80</width>
          <height>23</height>
         </size>
        </property>
@@ -75,14 +93,56 @@
      </item>
     </layout>
    </item>
-   <item row="0" column="1" colspan="2">
+   <item row="0" column="1">
+    <layout class="QGridLayout" name="gridLayout_2">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="minimumSize">
+        <size>
+         <width>50</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>50</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>文件名称:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="file_name">
+       <property name="minimumSize">
+        <size>
+         <width>280</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>280</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="2">
     <spacer name="horizontalSpacer">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
-       <width>535</width>
+       <width>157</width>
        <height>20</height>
       </size>
      </property>
@@ -132,10 +192,22 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="0" colspan="2">
+   <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QPushButton" name="add_panel">
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>80</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
         <string>添加面板</string>
        </property>
@@ -143,6 +215,18 @@
      </item>
      <item>
       <widget class="QPushButton" name="add_extend">
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>80</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
         <string>添加扩展</string>
        </property>
@@ -150,15 +234,15 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="2">
+   <item row="1" column="1" colspan="2">
     <spacer name="horizontalSpacer_2">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
-       <width>511</width>
-       <height>20</height>
+       <width>501</width>
+       <height>17</height>
       </size>
      </property>
     </spacer>
@@ -203,7 +287,7 @@
        </sizepolicy>
       </property>
       <property name="layoutDirection">
-       <enum>Qt::LeftToRight</enum>
+       <enum>Qt::LayoutDirection::LeftToRight</enum>
       </property>
      </widget>
     </widget>

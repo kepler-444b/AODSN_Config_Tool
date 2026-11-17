@@ -23,9 +23,6 @@ signals:
 
 private slots:
     void on_send_clicked();
-
-
-
     void on_clear_clicked();
 
 private:

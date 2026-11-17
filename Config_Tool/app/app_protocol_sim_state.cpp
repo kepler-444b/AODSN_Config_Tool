@@ -1,27 +1,19 @@
 #include "app_protocol_sim_state.h"
 
-
-uint8_t *app_get_led_by_num(extend_all_status_t *status, uint8_t index)
+uint16_t crc_16_modbus(const uint8_t *data, uint16_t length)
 {
-    if (status == NULL) return NULL;
-
-    if (index < 4) {
-        return &status->led_sel_1[index];
-    } else if (index < 16) {
-        return &status->led_sel_2[index - 4];
-    } else if (index < 24) {
-        return &status->led_sel_3[index - 16];
-    } else if (index < 32) {
-        return &status->led_sel_4[index - 24];
+    uint16_t crc = 0xFFFF;
+    while (length--) {
+        crc ^= *data++;
+        for (uint8_t i = 0; i < 8; i++) {
+            if (crc & 0x0001) {
+                crc = (crc >> 1) ^ 0xA001;
+            } else {
+                crc >>= 1;
+            }
+        }
     }
-    return NULL;
-}
-
-uint8_t app_panel_frame_crc(uint8_t *rxbuf, uint8_t len)
-{
-    uint8_t i, sum = 0;
-    for (i = 0; i < len; i++) sum = sum + rxbuf[i];
-    return (0xff - sum + 1);
+    return crc;
 }
 
 uint8_t app_panel_frame_sum(uint8_t *rxbuf, uint8_t len)
@@ -32,27 +24,76 @@ uint8_t app_panel_frame_sum(uint8_t *rxbuf, uint8_t len)
     return sum; // 直接返回累加和
 }
 
-
-AppProtocolSimState::AppProtocolSimState(QObject *parent, AppProtocolSetConfig * config, AppSerial* serialWidget)
+AppProtocolSimState::AppProtocolSimState(QObject *parent, AppProtocolSetConfig *config, AppSerial *serialWidget)
     : QObject(parent)
 {
-    m_config = config;
+    m_config       = config;
     m_serialWidget = serialWidget;
 }
 
 // 接收模拟按键数据
 void AppProtocolSimState::RecvSimPanelData(const panel_frame_t panel_frame)
 {
-    if(panel_frame.panel_tx_head != 0xAA){
+    if (panel_frame.panel_tx_head != 0xAA) {
         return;
     }
-    QByteArray build_panel_frame = BilidPanelSendFrame(panel_frame);    // 构造面板发送数据帧
 
-    if(m_serialWidget && m_serialWidget->SerialIsOpen())
-    {
-        m_serialWidget->SerialSendData(build_panel_frame);// 调用串口发送
+    QByteArray sim_panel_frame; // 用于保存按键发出的数据
+
+    // 增加上位机软件所需的帧头
+    sim_panel_frame.append(static_cast<char>(0xFF));
+    sim_panel_frame.append(static_cast<char>(0xAA));
+    sim_panel_frame.append(static_cast<char>(12));
+    sim_panel_frame.append(static_cast<char>(8));
+    sim_panel_frame.append(reinterpret_cast<const char *>(&panel_frame), sizeof(panel_frame));
+
+    if (m_serialWidget && m_serialWidget->SerialIsOpen()) {
+        m_serialWidget->SerialSendData(sim_panel_frame); // 调用串口发送给上位机
     }
-    RecvPanelFrame(build_panel_frame);
+
+    RecvPanelFrame(sim_panel_frame.mid(4, 12)); // 向后偏移4个字节,去掉上位机所需的帧头
+}
+
+// 接收模拟led数据
+void AppProtocolSimState::RecvSimLedData(const uint8_t led_num, const uint8_t lum, const uint8_t cct)
+{
+    my_extend_all_status.led[led_num].lum = lum;
+    my_extend_all_status.led[led_num].cct = cct;
+
+    QByteArray sim_frame;
+    sim_frame.append(static_cast<char>(0xFF));
+    sim_frame.append(static_cast<char>(0xAA));
+    sim_frame.append(static_cast<char>(152));
+    sim_frame.append(static_cast<char>(7));
+    sim_frame.append(BuildExtendRecvFrame());
+
+    if (m_serialWidget && m_serialWidget->SerialIsOpen()) {
+        m_serialWidget->SerialSendData(sim_frame);
+    }
+}
+
+// 接收模拟继电器数据
+void AppProtocolSimState::RecvSimRelayData(const uint8_t num, const bool status)
+{
+    uint8_t byte_index = num / 8;
+    uint8_t bit_index  = num % 8;
+
+    if (status) {
+        my_extend_all_status.relay[byte_index] |= (1 << bit_index);
+    } else {
+        my_extend_all_status.relay[byte_index] &= ~(1 << bit_index);
+    }
+
+    QByteArray sim_frame;
+    sim_frame.append(static_cast<char>(0xFF));
+    sim_frame.append(static_cast<char>(0xAA));
+    sim_frame.append(static_cast<char>(152));
+    sim_frame.append(static_cast<char>(7));
+    sim_frame.append(BuildExtendRecvFrame());
+
+    if (m_serialWidget && m_serialWidget->SerialIsOpen()) {
+        m_serialWidget->SerialSendData(sim_frame); // 调用串口发送
+    }
 }
 
 // 接收面板数据
@@ -63,204 +104,254 @@ void AppProtocolSimState::RecvPanelFrame(const QByteArray &data)
     uint8_t status     = data[5];
     uint8_t key_num    = data[6];
 
-    switch(frame_type)
-    {
-    case SIM_KEY:{
-        bool key_status = (status >> key_num) & 0x01; // 计算出该按键的状态
-        bind_data_t allBindsData = m_config->getAllBindData();
-        for (const bind_save_t& item : std::as_const(allBindsData.bind_data))
-        {
-            uint8_t bind_addr     = static_cast<uint8_t>(item.bind_data[0]);
-            uint8_t bind_key_num  = static_cast<uint8_t>(item.bind_data[1]);
-            uint8_t bind_status   = static_cast<uint8_t>(item.bind_data[2]);
-            uint8_t bind_scene_id = static_cast<uint8_t>(item.bind_data[3]);
+    switch (frame_type) {
+        case SIM_KEY: {
+            bool key_status          = (status >> key_num) & 0x01; // 计算出该按键的状态
+            bind_data_t allBindsData = m_config->getAllBindData();
+            for (const bind_save_t &item : std::as_const(allBindsData.bind_data)) {
+                uint8_t bind_addr     = static_cast<uint8_t>(item.bind_data[0]);
+                uint8_t bind_key_num  = static_cast<uint8_t>(item.bind_data[1]);
+                uint8_t bind_status   = static_cast<uint8_t>(item.bind_data[2]);
+                uint8_t bind_scene_id = static_cast<uint8_t>(item.bind_data[3]);
 
-            if ((bind_addr == panel_addr) && (bind_key_num == key_num) && (key_status == bind_status) && (bind_scene_id != 0xFF))
-            {
-                ExeSceneById(bind_scene_id);
+                if ((bind_addr == panel_addr) && (bind_key_num == key_num) && (key_status == bind_status) && (bind_scene_id != 0xFF)) {
+                    ExeSceneById(bind_scene_id);
+                }
             }
-        }
-    }break;
-    case SIM_KNOB:{
+        } break;
+        case SIM_KNOB_LUM:
+        case SIM_KNOB_CCT: {
+            uint8_t lum = data[7];
+            uint8_t cct = data[8];
 
-    }break;
-    default:
-        return;
+            bind_knob_data_t allBindsKnobData = m_config->getAllBindKnobData();
+            for (const bind_save_knob_t &item : std::as_const(allBindsKnobData.bind_knob_data)) {
+                uint8_t bind_addr        = static_cast<uint8_t>(item.bind_data[0]);
+                uint8_t bind_open_scene  = static_cast<uint8_t>(item.bind_data[1]);
+                uint8_t bind_close_scene = static_cast<uint8_t>(item.bind_data[2]);
+                uint8_t bind_ctrls[8]    = {0};
+                std::memcpy(bind_ctrls, item.bind_data.constData() + 3, 8);
+
+                if (bind_addr != panel_addr) {
+                    continue;
+                }
+                uint8_t lastLum = m_knob_last_lum[panel_addr];
+                if (lastLum == 0 && lum != 0) { // 由灭到亮,执行开场景
+                    if (bind_open_scene != 0xFF) {
+                        ExeSceneById(bind_open_scene);
+                    }
+                } else if (lastLum != 0 && lum == 0) { // 由亮到灭,执行关场景
+                    if (bind_close_scene != 0xFF) {
+                        ExeSceneById(bind_close_scene);
+                    }
+                }
+                m_knob_last_lum[panel_addr] = lum;
+
+                for (int byte_idx = 0; byte_idx < 8; ++byte_idx) {
+                    for (int bit_idx = 0; bit_idx < 8; ++bit_idx) {
+                        int led_index = byte_idx * 8 + bit_idx;
+
+                        if ((bind_ctrls[byte_idx] >> bit_idx) & 0x01) {
+                            my_extend_all_status.led[led_index].lum = lum;
+                            my_extend_all_status.led[led_index].cct = cct;
+                        }
+                    }
+                }
+            }
+            SendExtendData(BuildExtendRecvFrame());
+        } break;
+        default:
+            return;
     }
 }
 
+// 执行场景
 void AppProtocolSimState::ExeSceneById(const uint8_t scene_id)
 {
     config_data_t localConfig = m_config->getSceneConfigDataById(scene_id);
 
-    if (!localConfig.scene.isEmpty())
-    {
-        uint8_t   id    = localConfig.scene[0].scene_id;
-        QString   name  = localConfig.scene[0].scene_name;
+    if (!localConfig.scene.isEmpty()) {
+        // uint8_t   id    = localConfig.scene[0].scene_id;
+        QString name    = localConfig.scene[0].scene_name;
         QByteArray data = localConfig.scene[0].scene_data;
 
-        qDebug() << "场景 ID   :" << id;
-        qDebug() << "场景名称  :" << name;
-        qDebug() << "场景数据  :" << data.toHex(' ').toUpper();
+        scene_id_panel_t panel_scenes; // 用于存放该场景下的面板数据
+        FindPanenDataById(data, panel_scenes);
 
-        scene_id_t get_scene_id = {};
-        UnpackSceneData(data, get_scene_id);
-
-        // 构造发送给面板设备的数据帧
+        // 遍历每个面板
         for (uint8_t j = 0; j < PANEL_DEV_MAX; j++) {
+            uint8_t sub_idx  = j / 8;
+            uint8_t addr_idx = j % 8;
 
-            uint8_t sub_idx  = j / 8; // 在哪个 sub_frame 中
+            panel_sub_idx *target_idx = &my_panel_full_status.sub_frame[sub_idx].idx[addr_idx];
+            uint8_t ctrl              = panel_scenes.panel_ctrl[j];
+            uint8_t status            = panel_scenes.panel_status[j];
+            target_idx->status        = (target_idx->status & ~ctrl) | (status & ctrl);
 
-            for (uint8_t bit = 0; bit <= 5; bit++) {
-                // 如果 ctrl 的该位被勾选,则赋值 status 对应位
-                if (get_scene_id.key_ctrl[j] & (1U << bit)) {
-
-                    my_panel_full_status.sub_frame[sub_idx].idx[j].status &= ~(1U << bit);
-                    my_panel_full_status.sub_frame[sub_idx].idx[j].status |= (get_scene_id.key_status[j] & (1U << bit));
-                }
+            uint8_t r_1 = panel_scenes.panel_reserve_1[j];
+            uint8_t r_2 = panel_scenes.panel_reserve_2[j];
+            if (r_1 & 0x80) {
+                target_idx->reserve_1 = r_1;
             }
-            if ((get_scene_id.key_reserve[j] & 0x80)) { // 是否控制该旋钮
-
-                my_panel_full_status.sub_frame[sub_idx].idx[j].status |= (1U << 6); // 将 status 的 bit6 置1,表示key_reserve中的数据为旋钮值
-                my_panel_full_status.sub_frame[sub_idx].idx[j].reserve = get_scene_id.key_reserve[j] & 0x7F;
-            }
-        }
-
-        // 构造发送给扩展的数据帧
-        for (uint8_t j = 0; j < LED_NUM_MAX; j++) {
-            if (!(get_scene_id.led[j] & 0x80)) continue;
-
-            uint8_t val    = get_scene_id.led[j] & 0x7F; // 读取实际的亮度值
-            uint8_t *p_led = app_get_led_by_num(&my_extend_all_status, j);
-            if (p_led) *p_led = val;
-        }
-
-        // 将 relay_sel_1 的首地址作为 9 字节缓冲区的起点
-        for (uint8_t g = 0; g < 9; g++)
-        {
-            uint8_t ctrl   = get_scene_id.relay[g * 2];
-            uint8_t status = get_scene_id.relay[g * 2 + 1];
-
-            if (ctrl == 0)
-                continue;
-
-            if (g < 6)
-            {
-                my_extend_all_status.relay_sel_1[g] =
-                    (my_extend_all_status.relay_sel_1[g] & ~ctrl) |
-                    (status & ctrl);
-            }
-            else
-            {
-                my_extend_all_status.relay_sel_2[g - 6] =
-                    (my_extend_all_status.relay_sel_2[g - 6] & ~ctrl) |
-                    (status & ctrl);
+            if (r_2 & 0x80) {
+                target_idx->reserve_2 = r_2;
             }
         }
         SendPanelData(BilidPanelRecvFrame());
+
+        // 找出LED的数据
+        QByteArray led_data;
+        if (FindLedDataFromScene(data, led_data)) {
+            const uint8_t *src = reinterpret_cast<const uint8_t *>(led_data.constData());
+
+            for (int i = 0; i < 64; ++i) // 128 个字节,64组数据
+            {
+                uint8_t raw_lum = src[i * 2];     // 亮度字节
+                uint8_t raw_cct = src[i * 2 + 1]; // 色温字节
+                if (raw_lum & 0x80) {
+                    my_extend_all_status.led[i].lum = static_cast<uint8_t>(raw_lum & 0x7F);
+                }
+                if (raw_cct & 0x80) {
+                    my_extend_all_status.led[i].cct = static_cast<uint8_t>(raw_cct & 0x7F);
+                }
+            }
+        }
+
+        // 找出RELAY的数据
+        QByteArray relay_data;
+        if (FindRelayDataFromScene(data, relay_data)) {
+            for (int i = 0; i < 8; ++i) {
+                uint8_t ctrl_byte   = static_cast<uint8_t>(relay_data[i * 2]);
+                uint8_t status_byte = static_cast<uint8_t>(relay_data[i * 2 + 1]);
+
+                my_extend_all_status.relay[i] = (my_extend_all_status.relay[i] & ~ctrl_byte) | (status_byte & ctrl_byte);
+            }
+        }
+        // qDebug() << "SendExtendData:" << BuildExtendRecvFrame().toHex(' ').toUpper();
         SendExtendData(BuildExtendRecvFrame());
     }
-    else
-    {
-        qDebug() << "未捞到场景 ID" << scene_id << "的数据，无法打印";
-    }
 }
 
-void AppProtocolSimState::UnpackSceneData(const QByteArray &data, scene_id_t &out_scene_id)
+// 找出该场景下的面板数据
+void AppProtocolSimState::FindPanenDataById(const QByteArray &data, scene_id_panel_t &out_scene_id)
 {
-    if (data.size() != SCENE_INFO_SIZE) {
-        qCritical() << "Scene data length error:" << data.size();
+    // 重置内存
+    std::memset(&out_scene_id, 0, sizeof(scene_id_panel_t));
+
+    // 寻找 "PANEL:" 关键字
+    const QByteArray marker = "PANEL:";
+    int panelIdx            = data.indexOf(marker);
+
+    if (panelIdx == -1) {
+        qWarning() << "PANEL marker not found!";
         return;
     }
+    // 跳过 "PANEL:" (6 字节)
+    int offset = panelIdx + marker.size();
 
-    const uint8_t *cfg = reinterpret_cast<const uint8_t*>(data.constData());
-    uint16_t offset = 0;
+    // 计算面板数据总共需要多少字节 (4 * PANEL_DEV_MAX，也就是 4 * 32 = 128 字节)
+    int requiredLen = PANEL_DEV_MAX * 4;
 
-    // scene
-    out_scene_id.id = cfg[offset];
-    offset += 1 + 1;
-    // relay
-    memcpy(out_scene_id.relay, &cfg[offset], RELAY_NUM_MAX);
-    offset += RELAY_NUM_MAX + 1;
+    if (data.size() - offset < requiredLen) {
+        qCritical() << "Panel data size error! Available:" << (data.size() - offset) << "Required:" << requiredLen;
+        return;
+    }
+    const uint8_t *cfg = reinterpret_cast<const uint8_t *>(data.constData()) + offset;
 
-    // led
-    memcpy(out_scene_id.led, &cfg[offset], LED_NUM_MAX);
-    // APP_PRINTF_BUF("led", my_scene_id[insert].led, LED_NUM_MAX);
-    offset += (LED_NUM_MAX * 2) + 1; // 实际发下来的是64路led的状态,故而这里要乘2
-
-    // key_ctrl
-    memcpy(out_scene_id.key_ctrl, &cfg[offset], PANEL_DEV_MAX);
-    offset += PANEL_DEV_MAX + 1;
-
-    // key_status
-    memcpy(out_scene_id.key_status, &cfg[offset], PANEL_DEV_MAX);
-    offset += PANEL_DEV_MAX + 1;
-
-    // key_reserve
-    memcpy(out_scene_id.key_reserve, &cfg[offset], PANEL_DEV_MAX);
+    std::memcpy(out_scene_id.panel_ctrl, cfg, PANEL_DEV_MAX);
+    std::memcpy(out_scene_id.panel_status, cfg + PANEL_DEV_MAX, PANEL_DEV_MAX);
+    std::memcpy(out_scene_id.panel_reserve_1, cfg + PANEL_DEV_MAX * 2, PANEL_DEV_MAX);
+    std::memcpy(out_scene_id.panel_reserve_2, cfg + PANEL_DEV_MAX * 3, PANEL_DEV_MAX);
 }
 
-// 构造面板发送数据帧
-QByteArray AppProtocolSimState::BilidPanelSendFrame(const panel_frame_t &panel_frame)
+// 找出该场景下的LED数据
+bool AppProtocolSimState::FindLedDataFromScene(const QByteArray &scene_data, QByteArray &out_led_data)
 {
-    QByteArray buffer;
+    const QByteArray marker = "LED:";
+    int index               = scene_data.indexOf(marker);
 
-    buffer.append(reinterpret_cast<const char*>(&panel_frame.panel_tx_head), sizeof(panel_frame.panel_tx_head));
-    buffer.append(reinterpret_cast<const char*>(&panel_frame.panel_tx_type), sizeof(panel_frame.panel_tx_type));
-    buffer.append(reinterpret_cast<const char*>(&panel_frame.panel_tx_length), sizeof(panel_frame.panel_tx_length));
+    if (index != -1 && (index + marker.size() + 128) <= scene_data.size()) {
+        out_led_data = scene_data.mid(index + marker.size(), 128);
+        return true;
+    }
+    return false;
+}
 
-    buffer.append(reinterpret_cast<const char*>(&panel_frame.panel_info), sizeof(panel_frame.panel_info));
+// 找出该场景下的RELAY数据
+bool AppProtocolSimState::FindRelayDataFromScene(const QByteArray &scene_data, QByteArray &relay_data)
+{
+    const QByteArray marker = "RELAY:";
+    int index               = scene_data.indexOf(marker);
 
-    uint8_t crc = app_panel_frame_crc((uint8_t *)&panel_frame.panel_info, static_cast<uint8_t>(sizeof(panel_frame.panel_info)));
-    buffer.append(reinterpret_cast<const char*>(&crc), sizeof(crc));
-
-    buffer.append(reinterpret_cast<const char*>(&panel_frame.panel_tx_tail_1), sizeof(panel_frame.panel_tx_tail_1));
-    buffer.append(reinterpret_cast<const char*>(&panel_frame.panel_tx_tail_2), sizeof(panel_frame.panel_tx_tail_2));
-
-    return buffer;
+    if (index != -1 && (index + marker.size() + 16) <= scene_data.size()) {
+        relay_data = scene_data.mid(index + marker.size(), 16);
+        return true;
+    }
+    return false;
 }
 
 // 构造面板接收数据帧
 const QByteArray AppProtocolSimState::BilidPanelRecvFrame()
 {
     panel_tx_buf_t my_panel_tx_buf = {};
-    my_panel_tx_buf.fh_1       = PANEL_FRAME_TX_HEAD_1;
-    my_panel_tx_buf.fh_2       = PANEL_FRAME_TX_HEAD_2;
-    my_panel_tx_buf.type       = PANEL_FRAME_TX_TYPE;
-    my_panel_tx_buf.length     = sizeof(my_panel_full_status);
-    my_panel_tx_buf.full_frame = my_panel_full_status;
-    my_panel_tx_buf.crc        = app_panel_frame_crc((uint8_t *)my_panel_full_status.sub_frame, sizeof(my_panel_full_status.sub_frame));
-    my_panel_tx_buf.ft_1       = 0x0D;
-    my_panel_tx_buf.ft_2       = 0x0A;
-    return QByteArray(reinterpret_cast<const char*>(&my_panel_tx_buf), sizeof(my_panel_tx_buf));
+    my_panel_tx_buf.fh_1           = PANEL_FRAME_TX_HEAD_1;
+    my_panel_tx_buf.fh_2           = PANEL_FRAME_TX_HEAD_2;
+    my_panel_tx_buf.type           = PANEL_FRAME_TX_TYPE;
+    my_panel_tx_buf.length         = sizeof(my_panel_full_status);
+    my_panel_tx_buf.full_frame     = my_panel_full_status;
+    my_panel_tx_buf.crc            = app_panel_frame_sum((uint8_t *)my_panel_full_status.sub_frame, sizeof(my_panel_full_status.sub_frame));
+    my_panel_tx_buf.ft_1           = 0x0D;
+    my_panel_tx_buf.ft_2           = 0x0A;
+    QByteArray sendData(reinterpret_cast<const char *>(&my_panel_tx_buf), sizeof(my_panel_tx_buf));
+    qDebug() << "Panel Tx Data (Hex):" << sendData.toHex(' ');
+    return QByteArray(reinterpret_cast<const char *>(&my_panel_tx_buf), sizeof(my_panel_tx_buf));
 }
 
+// 构造扩展数据帧
 const QByteArray AppProtocolSimState::BuildExtendRecvFrame()
 {
-    extend_tx_buf_t my_extend_tx_buf;
-    memset(&my_extend_tx_buf, 0, sizeof(my_extend_tx_buf));
+    extend_tx_buf_t my_extend_tx_buf = {};
 
-    my_extend_tx_buf.fh   = EXTEND_FRAME_TX_HEAD;
-    my_extend_tx_buf.type = EXTEND_FRAME_TX_TYPE;
+    // 填充帧头 (FB FC)
+    my_extend_tx_buf.fh_1 = 0xFB;
+    my_extend_tx_buf.fh_2 = 0xFC;
 
-    memcpy(my_extend_tx_buf.relay_sel_1, my_extend_all_status.relay_sel_1, sizeof(my_extend_all_status.relay_sel_1));   // 0~6路继电器
-    memcpy(my_extend_tx_buf.tg_value, my_extend_all_status.tg_value, sizeof(my_extend_tx_buf.tg_value));                // 0~4路可控硅调光
+    // 填充 LED 识别码 ("LED:")
+    my_extend_tx_buf.led_tag[0] = 'L';
+    my_extend_tx_buf.led_tag[1] = 'E';
+    my_extend_tx_buf.led_tag[2] = 'D';
+    my_extend_tx_buf.led_tag[3] = ':';
 
-    my_extend_tx_buf.crc_1 = app_panel_frame_sum(reinterpret_cast<uint8_t*>(&my_extend_tx_buf), 12);
+    // 填充 64 路 LED 数据 (直接拷贝 my_extend_all_status.led)
+    std::memcpy(my_extend_tx_buf.led, my_extend_all_status.led, sizeof(my_extend_tx_buf.led));
 
-    memcpy(my_extend_tx_buf.led_sel_1, my_extend_all_status.led_sel_1, sizeof(my_extend_tx_buf.led_sel_1)); // 0~4路 LED
-    my_extend_tx_buf.reserve = 0x00;
-    my_extend_tx_buf.crc_2   = app_panel_frame_crc(my_extend_tx_buf.led_sel_1, sizeof(my_extend_tx_buf.led_sel_1));
+    // 填充 Relay 识别码 ("RELAY:")
+    my_extend_tx_buf.relay_tag[0] = 'R';
+    my_extend_tx_buf.relay_tag[1] = 'E';
+    my_extend_tx_buf.relay_tag[2] = 'L';
+    my_extend_tx_buf.relay_tag[3] = 'A';
+    my_extend_tx_buf.relay_tag[4] = 'Y';
+    my_extend_tx_buf.relay_tag[5] = ':';
 
-    memcpy(my_extend_tx_buf.led_sel_2, my_extend_all_status.led_sel_2, sizeof(my_extend_all_status.led_sel_2)); // 5~16路 LED
-    my_extend_tx_buf.crc_3 = app_panel_frame_crc(my_extend_tx_buf.led_sel_2, sizeof(my_extend_tx_buf.led_sel_2) - 1);
+    // 填充 Relay 数据 (直接拷贝 my_extend_all_status.relay)
+    std::memcpy(my_extend_tx_buf.relay, my_extend_all_status.relay, sizeof(my_extend_tx_buf.relay));
 
-    memcpy(my_extend_tx_buf.led_sel_3, my_extend_all_status.led_sel_3, sizeof(my_extend_tx_buf.led_sel_3));       // 17 ~24路 LED
-    memcpy(my_extend_tx_buf.air_dev, my_extend_all_status.air_dev, sizeof(my_extend_tx_buf.air_dev));             // 空调模块
-    memcpy(my_extend_tx_buf.relay_sel_2, my_extend_all_status.relay_sel_2, sizeof(my_extend_tx_buf.relay_sel_2)); // 7~9路继电器
-    memcpy(my_extend_tx_buf.led_sel_4, my_extend_all_status.led_sel_4, sizeof(my_extend_tx_buf.led_sel_4));       // 25~32路 LED
-    return QByteArray(reinterpret_cast<const char*>(&my_extend_tx_buf), sizeof(my_extend_tx_buf));
+    // 计算 CRC16 校验 (从 led_tag 开始到 relay 数据结束)
+    const uint8_t *crc_start_ptr = (const uint8_t *)&my_extend_tx_buf.led_tag;
+
+    // 计算参与校验的数据总长度 (led_tag[4] + led[128] + relay_tag[6] + relay[64] = 202 字节)
+    uint16_t crc_len = sizeof(my_extend_tx_buf.led_tag) + sizeof(my_extend_tx_buf.led) + sizeof(my_extend_tx_buf.relay_tag) + sizeof(my_extend_tx_buf.relay);
+    uint16_t crc     = crc_16_modbus(crc_start_ptr, crc_len);
+
+    my_extend_tx_buf.crc16_h = crc & 0xFF;
+    my_extend_tx_buf.crc16_l = (crc >> 8) & 0xFF;
+
+    // 填充帧尾 (0D 0A)
+    my_extend_tx_buf.ft_1 = 0x0D;
+    my_extend_tx_buf.ft_2 = 0x0A;
+
+    // 构造二进制 QByteArray 字节流
+    QByteArray sendData(reinterpret_cast<const char *>(&my_extend_tx_buf), sizeof(my_extend_tx_buf));
+    // qDebug() << "sendData:" << sendData.toHex(' ').toUpper();
+    return sendData;
 }
-
-
-

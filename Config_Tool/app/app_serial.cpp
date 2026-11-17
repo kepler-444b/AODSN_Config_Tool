@@ -1,14 +1,13 @@
 #include "app_serial.h"
 #include "ui_app_serial.h"
 
-AppSerial::AppSerial(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::AppSerial)
+AppSerial::AppSerial(QWidget *parent) : QWidget(parent),
+                                        ui(new Ui::AppSerial)
 {
     ui->setupUi(this);
     m_frameTimer = new QTimer(this);
     m_frameTimer->setSingleShot(true);
-    connect(m_frameTimer, &QTimer::timeout,  this,  &AppSerial::OnFrameTimeout);
+    connect(m_frameTimer, &QTimer::timeout, this, &AppSerial::OnFrameTimeout);
 
     ui->baudrate->addItem("9600");
     ui->baudrate->addItem("115200");
@@ -37,23 +36,24 @@ bool AppSerial::SerialSendData(const QByteArray &data)
 
     qint64 len = m_serial.write(data);
 
-    if (len == -1)
-    {
+    if (len == -1) {
         return false;
     }
 
+    m_serial.flush();
     emit sigSendData(data);
     return true;
 }
 
-bool AppSerial::SerialIsOpen() const{
+bool AppSerial::SerialIsOpen() const
+{
     return m_serial.isOpen();
 }
 
 // 检查波特率
-bool AppSerial::SerialCheackBaudRate(int baudRate) const {
-    if(baudRate != m_baudRate)
-    {
+bool AppSerial::SerialCheackBaudRate(int baudRate) const
+{
+    if (baudRate != m_baudRate) {
         QMessageBox::warning(nullptr, "波特率错误", QString("预期波特率为:%1,请检查波特率与端口是否正确").arg(baudRate));
         return false;
     }
@@ -67,7 +67,8 @@ void AppSerial::SerialRecv()
     if (data.isEmpty())
         return;
 
-    m_frameTimer->start(20);
+    m_frameTimer->start(10);
+    // emit sigRecvRawData(data);
 
     m_recvRawBuffer.append(data);
     m_recvBuffer.append(data);
@@ -89,18 +90,17 @@ void AppSerial::OnFrameTimeout()
 void AppSerial::ParseBuffer()
 {
     while (true) {
-        int headIndex = -1;
+        int headIndex     = -1;
         bool isPanelFrame = false; // 是否为面板发送的数据,其帧头为 0xAA
 
         for (int i = 0; i < m_recvBuffer.size() - 1; ++i) { // 查找帧头
             if ((uint8_t)m_recvBuffer[i] == FRAME_RX_FH_1 && (uint8_t)m_recvBuffer[i + 1] == FRAME_RX_FH_2) {
-                headIndex = i;
+                headIndex    = i;
                 isPanelFrame = false;
                 break;
             }
-            if ((uint8_t)m_recvBuffer[i] == 0xAA)
-            {
-                headIndex = i;
+            if ((uint8_t)m_recvBuffer[i] == 0xAA) {
+                headIndex    = i;
                 isPanelFrame = true;
                 break;
             }
@@ -135,7 +135,7 @@ void AppSerial::ParseBuffer()
         QByteArray frame = m_recvBuffer.left(tailIndex + 2);
 
         // 验证帧最小长度(至少 FE BB xx xx 0D 0A = 6字节)
-        uint8_t minLength = isPanelFrame? 12 : 6; // 验证最小长度,默认协议 6 字节, 面板发送的数据 12 字节
+        uint8_t minLength = isPanelFrame ? 12 : 6; // 验证最小长度,默认协议 6 字节, 面板发送的数据 12 字节
 
         if (frame.size() < minLength) {
             qDebug() << "Frame too short:" << frame.size() << "bytes, skip";
@@ -154,7 +154,7 @@ void AppSerial::ParseBuffer()
         if (isPanelFrame) {
             emit sigRecvPanelData(frame); // 发送面板数据信号
         } else {
-            emit sigRecvData(frame);  // 发送其他数据信号
+            emit sigRecvData(frame); // 发送其他数据信号
             qDebug() << "[sigRecvData] Frame Length:" << frame.size();
         }
         // 从缓冲区中移除已经成功解析的帧数据
@@ -169,55 +169,36 @@ void AppSerial::RefreshPorts()
 
     const auto ports = QSerialPortInfo::availablePorts();
 
-    for (const QSerialPortInfo &info : ports)
-    {
-        // 创建一个临时的串口对象来测试它是否被占用
-        QSerialPort testPort(info);
-
-        // 尝试以读写模式打开串口
-        if (testPort.open(QIODevice::ReadWrite))
-        {
-            // 如果成功打开,说明串口真正可用,加入下拉菜单
-            ui->com->addItem(info.portName());
-            // 测试完毕后记得关闭它,否则后面你的程序自己也用不了
-            testPort.close();
-        }
-        else
-        {
-            // 如果打开失败,说明串口可能被其他程序占用了,或者权限不足
-            qDebug() << "串口" << info.portName() << "正忙或无法打开,已跳过";
-        }
+    for (const QSerialPortInfo &info : ports) {
+        ui->com->addItem(info.portName());
+        qDebug() << "发现串口:" << info.portName() << "description:" << info.description() << "manufacturer:" << info.manufacturer();
     }
 
-    if (ui->com->count() > 0)
-    {
+    if (ui->com->count() > 0) {
         ui->com->setCurrentIndex(0);
         m_portName = ui->com->currentText();
-        qDebug() << "默认选择串口：" << m_portName;
-    }
-    else
-    {
+        qDebug() << "默认选择串口:" << m_portName;
+    } else {
         m_portName.clear();
-        qDebug() << "没有检测到任何当前闲置的可打开串口";
+        qDebug() << "没有检测到串口";
     }
 }
 
 // 波特率改变
-void AppSerial::on_baudrate_currentIndexChanged(const QString &arg1)
+void AppSerial::on_baudrate_currentIndexChanged(int index)
 {
-    bool ok = false;
-    int baud = arg1.toInt(&ok);
-    if (!ok) return;
-    m_baudRate = baud;
+    m_baudRate = ui->baudrate->itemText(index).toInt();
+    qDebug() << "波特率:" << m_baudRate;
 }
 
 // 串口选择
-void AppSerial::on_com_currentIndexChanged(const QString &arg1)
+void AppSerial::on_com_currentTextChanged(const QString &arg1)
 {
     m_portName = arg1;
     qDebug() << "当前选择串口：" << m_portName;
 }
 
+// 刷新串口
 void AppSerial::on_refresh_com_clicked()
 {
     RefreshPorts();
@@ -226,21 +207,20 @@ void AppSerial::on_refresh_com_clicked()
 // 打开串口
 void AppSerial::on_switch_com_clicked()
 {
-    if (!m_isOpen)
-    {
+    if (!m_isOpen) {
         m_baudRate = ui->baudrate->currentText().toInt(); // 从ui界面取到波特率
+
+        qDebug() << "[串口] 准备打开:" << "端口 =" << m_portName << "波特率 =" << m_baudRate << "对象 =" << &m_serial;
         m_serial.setPortName(m_portName);
         m_serial.setBaudRate(m_baudRate);
         m_serial.setDataBits(QSerialPort::Data8);
         m_serial.setParity(QSerialPort::NoParity);
         m_serial.setStopBits(QSerialPort::OneStop);
         m_serial.setFlowControl(QSerialPort::NoFlowControl);
-        qDebug() << "串口已打开：" << "端口=" << m_portName << "波特率=" << m_baudRate;
 
-        if (!m_serial.open(QIODevice::ReadWrite))
-        {
+        if (!m_serial.open(QIODevice::ReadWrite)) {
             QString err = m_serial.errorString();
-            QMessageBox::warning(this, "错误\n",  err);
+            QMessageBox::warning(this, "错误\n", err);
             return;
         }
 
@@ -248,9 +228,7 @@ void AppSerial::on_switch_com_clicked()
         ui->switch_com->setText("关闭");
         SetControlsEnabled(false); // 锁定控件
         connect(&m_serial, &QSerialPort::readyRead, this, &AppSerial::SerialRecv, Qt::UniqueConnection);
-    }
-    else
-    {
+    } else {
         m_serial.close();
         m_isOpen = false;
         disconnect(&m_serial, &QSerialPort::readyRead, this, &AppSerial::SerialRecv);
@@ -273,9 +251,9 @@ void AppSerial::SaveSettings()
 void AppSerial::LoadSettings()
 {
     QSettings settings("MyCompany", "MySerialApp");
-    m_portName = settings.value("portName", m_portName).toString();
-    m_timeout = settings.value("timeout", m_timeout).toInt();
-    m_baudRate = settings.value("baudRate", m_baudRate).toInt();
+    m_portName  = settings.value("portName", m_portName).toString();
+    m_timeout   = settings.value("timeout", m_timeout).toInt();
+    m_baudRate  = settings.value("baudRate", m_baudRate).toInt();
     m_autoFrame = settings.value("autoFrame", m_autoFrame).toBool();
 
     if (ui->com->findText(m_portName) >= 0) // 恢复串口

@@ -17,6 +17,7 @@ public:
     ~DialogTimer();
 
     void setDisplay(const timer_task_t* tasks);
+    void updateSceneList(const QVector<scene_save_t>& scenes);
 
 signals:
     void sigGetTimerTask();  // 发送获取定时器任务的信号
@@ -30,6 +31,7 @@ private:
 
     Ui::DialogTimer *ui;
     timer_task_t m_tasks[TIMER_TASK_MAX];
+    QVector<scene_save_t> m_sceneList;
 };
 
 #endif // APP_SEL_TIMER_H

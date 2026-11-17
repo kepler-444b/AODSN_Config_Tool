@@ -36,13 +36,7 @@ void ModelPanel1Key::SetPanelState(const QByteArray &data)
     uint8_t addr_idx = m_addr % PANEL_FRAME_RX_ADDR_LEN; // 在该 sub_frame 中的第几个地址
     uint8_t sub_start = 4 + sub_idx * PANEL_FRAME_RX_SUB_LEN; // 子帧起始地址索引
 
-    uint8_t addr    = data[sub_start + (addr_idx * 2)];     // 每个按键的状态
-    //    uint8_t reserve = data[sub_start + (addr_idx * 2) + 1]; // 保留/旋钮值
-
-    //    uint8_t bl = data[sub_start + 16];    // 子帧背光
-    //    uint8_t res_1 = data[sub_start + 17]; // 子帧保留1
-    //    uint8_t res_2 = data[sub_start + 18]; // 子阵保留2
-
+    uint8_t addr    = data[sub_start + (addr_idx * 3)];     // 每个按键的状态
     m_status = addr ^ 0x3F;
 
     for (int i = 0; i < m_key_num; ++i) {
@@ -61,7 +55,7 @@ void ModelPanel1Key::SetPanelState(const QByteArray &data)
 
 void ModelPanel1Key::SetPanelAddr(const uint8_t addr)
 {
-    ui->addr->setText(QString("地址:%1").arg(addr));
+    ui->addr->setText(QString("面板地址:%1").arg(addr));
     m_addr = addr;
 }
 
@@ -160,13 +154,20 @@ bool ModelPanel1Key::eventFilter(QObject *obj, QEvent *event)
     return true; // 拦截事件
 }
 
+uint8_t ModelPanel1Key::frame_crc(uint8_t *rxbuf, uint8_t len)
+{
+    uint8_t i, sum = 0;
+    for (i = 0; i < len; i++) sum = sum + rxbuf[i];
+    return (0xff - sum + 1);
+}
+
 void ModelPanel1Key::on_key_1_clicked()
 {
     ui->key_1->setChecked(!ui->key_1->isChecked()); // 状态回滚
-    bulid_panel_frame(0);
+    build_panel_frame(0);
 }
 
-void ModelPanel1Key::bulid_panel_frame(const uint8_t key_num)
+void ModelPanel1Key::build_panel_frame(const uint8_t key_num)
 {
     panel_frame_t panel_frame = {};
 
@@ -177,6 +178,10 @@ void ModelPanel1Key::bulid_panel_frame(const uint8_t key_num)
     panel_frame.panel_info.level    = 0x00;
     panel_frame.panel_info.status   = m_status;
     panel_frame.panel_info.key_num  = key_num;
-
+    panel_frame.panel_info.reserve_1 = 0x00;
+    panel_frame.panel_info.reserve_2 = 0x00;
+    panel_frame.panel_tx_crc = frame_crc(reinterpret_cast<uint8_t *>(&panel_frame.panel_info), panel_frame.panel_tx_length);
+    panel_frame.panel_tx_tail_1 = 0x0D;
+    panel_frame.panel_tx_tail_2 = 0x0A;
     emit sendSimState(panel_frame);
 }

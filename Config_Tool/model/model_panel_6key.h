@@ -32,11 +32,12 @@ protected:
 
 signals:
     void requestDelete(int id); // 删除产品
-    void keyNameChanged(uint8_t panelId, int keyIndex, const QString& newName); // 按键改名
-    void requestBindScene(uint8_t panel_addr, int key_num, uint8_t scene_id, bool state);
+    void keyNameChanged(uint8_t panelId, int keyIndex, const QString& newName);          // 按键改名
+    void requestBindScene(uint8_t panel_addr, int key_num, uint8_t scene_id, bool state);// 绑定按键
     void sendSimState(const panel_frame_t panel_frame);
 
 private slots:
+    uint8_t frame_crc(uint8_t *rxbuf, uint8_t len);
     void on_key_1_clicked();
     void on_key_2_clicked();
     void on_key_3_clicked();
@@ -45,7 +46,7 @@ private slots:
     void on_key_6_clicked();
 
 private:
-    void bulid_panel_frame(const uint8_t key_num);
+    void build_panel_frame(const uint8_t key_num);
     Ui::ModelPanel6Key *ui;
     QList<QPushButton*> m_buttons;       // 存储6个按钮
     QVector<scene_save_t> m_sceneList;   // 获取场景列表

@@ -7,8 +7,9 @@
 
 typedef enum
 {
-    RELAY_EX = 0,
-    LED_EX   = 1
+    RELAY_EX   = 0,
+    LED_EX     = 1,
+    LED_CCT_EX = 2
 } ExtendType;
 
 typedef struct
@@ -16,24 +17,11 @@ typedef struct
     uint8_t id;
     ExtendType type;
     QVector<bool> led_enable;
-    QVector<int>  led_value;
-
+    QVector<int>  led_lum;
+    QVector<int>  led_cct;
     QVector<bool> relay_enable;
     QVector<bool> relay_state;
 } ExtendInfo_t;
-
-typedef struct
-{
-    uint8_t addr;
-    uint8_t led_lum[8];
-
-} ExtendLedInfo_t;
-
-typedef struct
-{
-    uint8_t addr;
-    uint8_t relay_state;
-} ExtendRelayInfo_t;
 
 namespace Ui {
 class DialogExtend;
@@ -52,6 +40,7 @@ public:
 
 private slots:
     void on_led_ex_clicked();
+    void on_led_cct_ex_clicked();
     void on_relay_ex_clicked();
     void on_pushButton_clicked();
 

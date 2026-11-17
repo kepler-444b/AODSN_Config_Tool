@@ -1,9 +1,8 @@
 #include "app_set_addr.h"
 #include "ui_app_set_addr.h"
 
-AppSetAddr::AppSetAddr(QWidget *parent, AppSerial* serialWidget) :
-    QWidget(parent),
-    ui(new Ui::AppSetAddr)
+AppSetAddr::AppSetAddr(QWidget *parent, AppSerial *serialWidget) : QWidget(parent),
+                                                                   ui(new Ui::AppSetAddr)
 {
     ui->setupUi(this);
     ui->lineEdit->setEnabled(false);
@@ -32,22 +31,21 @@ AppSetAddr::~AppSetAddr()
 void AppSetAddr::on_device_sel_activated(int index)
 {
     ui->SetAddrWidget->setCurrentIndex(index);
-    switch (index)
-    {
-    case 0: // 灯控面板
-        break;
+    switch (index) {
+        case 0: // 灯控面板
+            break;
 
-    case 1: // 4路可控硅
-        break;
+        case 1: // 4路可控硅
+            break;
 
-    case 2: // 雷达感应调光主机
-        initRadarCheckBox();
-        auto_crtl_enable(false);  // 雷达感应调光主机默认禁用
-        break;
-    case 3: // 毫米波雷达
-        break;
-    default:
-        break;
+        case 2: // 雷达感应调光主机
+            initRadarCheckBox();
+            auto_crtl_enable(false); // 雷达感应调光主机默认禁用
+            break;
+        case 3: // 毫米波雷达
+            break;
+        default:
+            break;
     }
 }
 // ========================== 灯控面板 ==========================
@@ -68,8 +66,9 @@ void AppSetAddr::on_pushButton_clicked()
 // 获取面板设备信息
 void AppSetAddr::on_dev_info_clicked()
 {
-    uint8_t addr = ui->spinBox->value();
-    m_protocol_set_addr->GetInfo(0x00, addr);
+    // uint8_t addr = ui->spinBox->value();
+    // m_protocol_set_addr->GetInfo(0x00, addr);
+    m_protocol_set_addr->AddrGetInfo();
 }
 
 // ======================== 4路可控硅调光 ========================
@@ -93,7 +92,7 @@ void AppSetAddr::on_QSlider_triac_death_valueChanged(int value)
 {
     ui->triac_death->setText(QString::number(value));
     m_TriacDeathValue = value;
-    m_sendType = TRIAC_DEATH;
+    m_sendType        = TRIAC_DEATH;
     m_sendTimer.start(100);
 }
 
@@ -102,7 +101,7 @@ void AppSetAddr::on_QSlider_triac_lum_valueChanged(int value)
 {
     ui->triac_lum->setText(QString::number(value));
     m_TriacLumValue = value;
-    m_sendType = TRIAC_LUM;
+    m_sendType      = TRIAC_LUM;
     m_sendTimer.start(100);
 }
 
@@ -141,8 +140,7 @@ void AppSetAddr::on_QSlider_auto_death_valueChanged(int value)
 {
     ui->auto_death->setText(QString::number(value));
     m_AutoDeathValue = value;
-    if (m_data_echo)
-    {
+    if (m_data_echo) {
         return;
     }
 
@@ -155,8 +153,7 @@ void AppSetAddr::on_QSlider_auto_no_one_valueChanged(int value)
 {
     ui->auto_no_one->setText(QString::number(value));
     m_AutoNoOneValue = value;
-    if (m_data_echo)
-    {
+    if (m_data_echo) {
         return;
     }
     m_sendType = AUTO_NO_ONE;
@@ -168,8 +165,7 @@ void AppSetAddr::on_QSlider_auto_some_one_valueChanged(int value)
 {
     ui->auto_some_one->setText(QString::number(value));
     m_AutoSomeOneValue = value;
-    if (m_data_echo)
-    {
+    if (m_data_echo) {
         return;
     }
     m_sendType = AUTO_SOME_ONE;
@@ -181,8 +177,7 @@ void AppSetAddr::on_QSlider_auto_active_valueChanged(int value)
 {
     ui->auto_active->setText(QString::number(value));
     m_AutoActiveValue = value;
-    if (m_data_echo)
-    {
+    if (m_data_echo) {
         return;
     }
     m_sendType = AUTO_ACTIVE;
@@ -193,13 +188,10 @@ void AppSetAddr::on_QSlider_auto_active_valueChanged(int value)
 void AppSetAddr::on_auto_debug_clicked()
 {
     uint8_t addr = ui->auto_addr->value();
-    if (ui->auto_debug->isChecked())
-    {
+    if (ui->auto_debug->isChecked()) {
         auto_crtl_enable(true);
         m_protocol_set_addr->SetInfo(0x02, 0x05, addr, true);
-    }
-    else
-    {
+    } else {
         auto_crtl_enable(false);
         m_protocol_set_addr->SetInfo(0x02, 0x05, addr, false);
     }
@@ -249,10 +241,8 @@ void AppSetAddr::initRadarCheckBox()
     m_radar_check[3][7] = ui->ladar_4_vol4;
 
     // 所有 Checkbox 共用一个槽函数
-    for (int radar = 0; radar < 4; radar++)
-    {
-        for (int index = 0; index < 8; index++)
-        {
+    for (int radar = 0; radar < 4; radar++) {
+        for (int index = 0; index < 8; index++) {
             connect(m_radar_check[radar][index], &QCheckBox::toggled, this, &AppSetAddr::onRadarCheckChanged);
         }
     }
@@ -269,17 +259,13 @@ void AppSetAddr::onRadarCheckChanged(bool checked)
 
     QCheckBox *checkBox = qobject_cast<QCheckBox *>(sender());
 
-    if (checkBox == nullptr)
-    {
+    if (checkBox == nullptr) {
         return;
     }
 
-    for (int radar = 0; radar < 4; radar++)
-    {
-        for (int index = 0; index < 8; index++)
-        {
-            if (m_radar_check[radar][index] == checkBox)
-            {
+    for (int radar = 0; radar < 4; radar++) {
+        for (int index = 0; index < 8; index++) {
+            if (m_radar_check[radar][index] == checkBox) {
                 // 保存当前复选框状态
                 m_radar_map[radar][index] = checked ? 1 : 0;
                 QByteArray radar_map(reinterpret_cast<const char *>(m_radar_map), sizeof(m_radar_map));
@@ -296,25 +282,23 @@ void AppSetAddr::auto_crtl_enable(bool enable)
 {
     // 雷达感应调光主机,在没有进入调试模式的时候,禁用若干控件
 
-    ui->QSlider_auto_death->setEnabled(enable);       // 死区调节滑块
-    ui->auto_death->setEnabled(enable);               // 死区调节数值
+    ui->QSlider_auto_death->setEnabled(enable); // 死区调节滑块
+    ui->auto_death->setEnabled(enable);         // 死区调节数值
 
-    ui->QSlider_auto_no_one->setEnabled(enable);      // 无人亮度滑块
-    ui->auto_no_one->setEnabled(enable);              // 无人亮度数值
+    ui->QSlider_auto_no_one->setEnabled(enable); // 无人亮度滑块
+    ui->auto_no_one->setEnabled(enable);         // 无人亮度数值
 
-    ui->QSlider_auto_some_one->setEnabled(enable);    // 有人亮度滑块
-    ui->auto_some_one->setEnabled(enable);            // 有人亮度数值
+    ui->QSlider_auto_some_one->setEnabled(enable); // 有人亮度滑块
+    ui->auto_some_one->setEnabled(enable);         // 有人亮度数值
 
-    ui->QSlider_auto_active->setEnabled(enable);      // 活跃亮度滑块
-    ui->auto_active->setEnabled(enable);              // 活跃亮度数值
+    ui->QSlider_auto_active->setEnabled(enable); // 活跃亮度滑块
+    ui->auto_active->setEnabled(enable);         // 活跃亮度数值
 
-    ui->auto_grad->setEnabled(enable);                // 渐变设置
+    ui->auto_grad->setEnabled(enable); // 渐变设置
 
     // 雷达 PWM / VOL 控件
-    for (int radar = 0; radar < 4; radar++)
-    {
-        for (int index = 0; index < 8; index++)
-        {
+    for (int radar = 0; radar < 4; radar++) {
+        for (int index = 0; index < 8; index++) {
             m_radar_check[radar][index]->setEnabled(enable);
         }
     }
@@ -324,20 +308,21 @@ void AppSetAddr::auto_crtl_enable(bool enable)
 // 获取毫米波雷达设备信息
 void AppSetAddr::on_get_radar_info_clicked()
 {
-    uint8_t addr = ui->mmw_radar->value();
+    uint8_t mmw_addr = ui->mmw_radar->value();         // 雷达地址
+    uint8_t auto_light_addr = ui->auto_light->value(); // 雷达感应调光主机地址
+
+    uint8_t addr = (mmw_addr << 4) | (auto_light_addr & 0x0F);  // 高4位(雷达地址),低4位(雷达感应调光主机)
     m_protocol_set_addr->GetInfo(0x03, addr);
 }
 
 // 设置毫米波雷达设备信息
 void AppSetAddr::on_set_radar_info_clicked()
 {
-    uint8_t addr = ui->mmw_radar->value();
+    uint8_t addr  = ui->mmw_radar->value();
     uint8_t value = ui->mmw_radar_new_addr->text().toInt();
 
-    m_protocol_set_addr->MmwRadarSetInfo(value, addr);
-
+    m_protocol_set_addr->SetInfo(0x03, 0x01, addr, value); // 设置毫米波雷达地址
 }
-
 
 // 回显设备信息
 void AppSetAddr::recvDevInfo(const QByteArray data)
@@ -349,41 +334,40 @@ void AppSetAddr::recvDevInfo(const QByteArray data)
 
     if (cmd_type == 0x05) // 获取设备信息
     {
-        m_data_echo = true; // 标志为回显数据
+        m_data_echo = true;   // 标志为回显数据
         if (dev_type == 0x00) // 面板类设备
         {
-            if (dev_ver > 99)
-            {
+            if (dev_ver > 99) {
                 dev_ver = 99;
             }
-            double version_num = dev_ver / 10.0;
+            double version_num  = dev_ver / 10.0;
             QString version_str = QString("V %1").arg(version_num, 0, 'f', 1);
             ui->lineEdit->setText(version_str);
+            QMessageBox::information(this, "提示", "设备信息获取成功");
         }
         if (dev_type == 0x01) // 可控硅调光
         {
-            if (dev_ver > 99)
-            {
+            if (dev_ver > 99) {
                 dev_ver = 99;
             }
-            double version_num = dev_ver / 10.0;
+            double version_num  = dev_ver / 10.0;
             QString version_str = QString("V %1").arg(version_num, 0, 'f', 1);
             ui->triac_ver->setText(version_str);
 
             uint8_t fade_time   = data[7];
             uint8_t death_value = data[8];
 
-            ui->triac_grad->setValue(fade_time);                     // 设置渐变时间
-            ui->triac_death->setText(QString::number(death_value));  // 设置死区数值
+            ui->triac_grad->setValue(fade_time);                    // 设置渐变时间
+            ui->triac_death->setText(QString::number(death_value)); // 设置死区数值
             ui->QSlider_triac_death->setValue(death_value);
+            QMessageBox::information(this, "提示", "设备信息获取成功");
         }
-        if(dev_type == 0x02) // 雷达感应调光主机
+        if (dev_type == 0x02) // 雷达感应调光主机
         {
-            if (dev_ver > 99)
-            {
+            if (dev_ver > 99) {
                 dev_ver = 99;
             }
-            double version_num = dev_ver / 10.0;
+            double version_num  = dev_ver / 10.0;
             QString version_str = QString("V %1").arg(version_num, 0, 'f', 1);
             ui->auto_ver->setText(version_str);
 
@@ -394,8 +378,8 @@ void AppSetAddr::recvDevInfo(const QByteArray data)
             uint8_t some_one_value = data[10];
             uint8_t active_value   = data[11];
 
-            ui->auto_grad->setValue(fade_time);                     // 设置渐变时间
-            ui->auto_death->setText(QString::number(death_value));  // 设置死区数值
+            ui->auto_grad->setValue(fade_time);                    // 设置渐变时间
+            ui->auto_death->setText(QString::number(death_value)); // 设置死区数值
             ui->QSlider_auto_death->setValue(death_value);
 
             ui->auto_no_one->setText(QString::number(no_one_value)); // 设置无人数值
@@ -418,24 +402,23 @@ void AppSetAddr::recvDevInfo(const QByteArray data)
             memcpy(radar_3, data.constData() + 28, sizeof(radar_3));
             memcpy(radar_4, data.constData() + 36, sizeof(radar_4));
 
-            for (int radar = 0; radar < 4; radar++)
-            {
-                for (int index = 0; index < 8; index++)
-                {
+            for (int radar = 0; radar < 4; radar++) {
+                for (int index = 0; index < 8; index++) {
                     m_radar_map[radar][index] = data[12 + radar * 8 + index] ? 1 : 0;        // 保存雷达映射数据
                     m_radar_check[radar][index]->setChecked(m_radar_map[radar][index] != 0); // 回显到 Checkbox
                 }
             }
+            QMessageBox::information(this, "提示", "设备信息获取成功");
         }
-        if(dev_type == 0x03) // 毫米波雷达
+        if (dev_type == 0x03) // 毫米波雷达
         {
-            if (dev_ver > 99)
-            {
+            if (dev_ver > 99) {
                 dev_ver = 99;
             }
-            double version_num = dev_ver / 10.0;
+            double version_num  = dev_ver / 10.0;
             QString version_str = QString("V %1").arg(version_num, 0, 'f', 1);
             ui->mmw_ver->setText(version_str);
+            QMessageBox::information(this, "提示", "设备信息获取成功");
         }
         m_data_echo = false;
     }
@@ -444,58 +427,33 @@ void AppSetAddr::recvDevInfo(const QByteArray data)
 // 滑块延时发送
 void AppSetAddr::onSendTimeout()
 {
-    switch(m_sendType)
-    {
-    case TRIAC_DEATH:
-    {
-        uint8_t addr = ui->triac_addr->value();
-        m_protocol_set_addr->SetInfo(0x01, 0x02, addr, m_TriacDeathValue);
-    }
-    break;
-    case TRIAC_LUM:
-    {
-        uint8_t addr = ui->triac_addr->value();
-        m_protocol_set_addr->SetInfo(0x01, 0x03, addr, m_TriacLumValue);
-    }
-    break;
-    case AUTO_DRATH:
-    {
-        uint8_t addr = ui->auto_addr->value();
-        m_protocol_set_addr->SetInfo(0x02, 0x02, addr, m_AutoDeathValue);
-    }
-    break;
-    case AUTO_NO_ONE:
-    {
-        uint8_t addr = ui->auto_addr->value();
-        m_protocol_set_addr->SetInfo(0x02, 0x06, addr, m_AutoNoOneValue);
-    }
-    break;
-    case AUTO_SOME_ONE:
-    {
-        uint8_t addr = ui->auto_addr->value();
-        m_protocol_set_addr->SetInfo(0x02, 0x07, addr, m_AutoSomeOneValue);
-    }
-    break;
-    case AUTO_ACTIVE:
-    {
-        uint8_t addr = ui->auto_addr->value();
-        m_protocol_set_addr->SetInfo(0x02, 0x08, addr, m_AutoActiveValue);
-    }
-    break;
-    default:
-        break;
+    switch (m_sendType) {
+        case TRIAC_DEATH: {
+            uint8_t addr = ui->triac_addr->value();
+            m_protocol_set_addr->SetInfo(0x01, 0x02, addr, m_TriacDeathValue);
+        } break;
+        case TRIAC_LUM: {
+            uint8_t addr = ui->triac_addr->value();
+            m_protocol_set_addr->SetInfo(0x01, 0x03, addr, m_TriacLumValue);
+        } break;
+        case AUTO_DRATH: {
+            uint8_t addr = ui->auto_addr->value();
+            m_protocol_set_addr->SetInfo(0x02, 0x02, addr, m_AutoDeathValue);
+        } break;
+        case AUTO_NO_ONE: {
+            uint8_t addr = ui->auto_addr->value();
+            m_protocol_set_addr->SetInfo(0x02, 0x06, addr, m_AutoNoOneValue);
+        } break;
+        case AUTO_SOME_ONE: {
+            uint8_t addr = ui->auto_addr->value();
+            m_protocol_set_addr->SetInfo(0x02, 0x07, addr, m_AutoSomeOneValue);
+        } break;
+        case AUTO_ACTIVE: {
+            uint8_t addr = ui->auto_addr->value();
+            m_protocol_set_addr->SetInfo(0x02, 0x08, addr, m_AutoActiveValue);
+        } break;
+        default:
+            break;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
 

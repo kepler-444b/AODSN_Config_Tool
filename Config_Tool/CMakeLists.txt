@@ -11,6 +11,8 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets SerialPort)
 qt_standard_project_setup()
 
 qt_add_executable(ConfigTool
+    WIN32
+
     main.cpp
     mainwindow.cpp
     mainwindow.h
@@ -80,10 +82,12 @@ qt_add_executable(ConfigTool
     model/model_relay_ex.cpp
     model/model_relay_ex.h
     model/model_relay_ex.ui
+    model/model_panel_knob.h
+    model/model_panel_knob.cpp
+    model/model_panel_knob.ui
 
     resources/app.qrc
     resources/app.rc
-
 )
 
 target_link_libraries(ConfigTool PRIVATE
@@ -93,17 +97,21 @@ target_link_libraries(ConfigTool PRIVATE
     Qt6::SerialPort
 )
 
-if(WIN32)
-    set_target_properties(ConfigTool PROPERTIES
-        WIN32_EXECUTABLE TRUE
-    )
-endif()
-
-target_include_directories(ConfigTool PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
+target_include_directories(ConfigTool PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 include(GNUInstallDirs)
+
 install(TARGETS ConfigTool
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     BUNDLE DESTINATION .
 )
+
+qt_generate_deploy_app_script(
+    TARGET ConfigTool
+    OUTPUT_SCRIPT deploy_script
+    NO_UNSUPPORTED_PLATFORM_ERROR
+)
+
+install(SCRIPT ${deploy_script})

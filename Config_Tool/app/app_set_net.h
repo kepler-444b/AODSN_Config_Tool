@@ -26,7 +26,6 @@ private slots:
     void on_set_info_clicked();
     void on_get_info_clicked();
 
-
 private:
     Ui::AppSetNet *ui;
     AppProtocolSetNet *m_protocol_set_net = nullptr;

@@ -1,6 +1,6 @@
 #include "app_protocol_set_addr.h"
 
-AppProtocolSetAddr::AppProtocolSetAddr(QObject *parent, AppSerial* serialWidget)
+AppProtocolSetAddr::AppProtocolSetAddr(QObject *parent, AppSerial *serialWidget)
     : QObject(parent), m_serialWidget(serialWidget)
 {
 }
@@ -8,8 +8,7 @@ AppProtocolSetAddr::AppProtocolSetAddr(QObject *parent, AppSerial* serialWidget)
 // 检查波特率并发送数据帧
 bool AppProtocolSetAddr::SendDataBaudRateCheck(const QByteArray &frame, qint32 baudRate)
 {
-    if (!m_serialWidget || !m_serialWidget->SerialCheackBaudRate(baudRate))
-    {
+    if (!m_serialWidget || !m_serialWidget->SerialCheackBaudRate(baudRate)) {
         return false;
     }
     m_serialWidget->SerialSendData(frame);
@@ -34,8 +33,7 @@ QByteArray AppProtocolSetAddr::BuildDevInfoData(uint8_t dev_type, uint8_t set_ty
     data.append(static_cast<char>(addr));
 
     // 设置类型
-    if (set_type != 0x00)
-    {
+    if (set_type != 0x00) {
         data.append(static_cast<char>(set_type));
     }
 
@@ -59,8 +57,7 @@ void AppProtocolSetAddr::RecvDataParse(const QByteArray &data)
     {
         QByteArray frame = BuildFrameAddr(m_panelAddr, SET_ADDR_SINGLE); // 单发地址
         SendDataBaudRateCheck(frame);
-    }
-    else if (cmd_type == 0x05) // 设备信息
+    } else if (cmd_type == 0x05) // 设备信息
     {
         emit sigDevInfo(data);
     }
@@ -78,21 +75,21 @@ void AppProtocolSetAddr::AddrSendAll()
     SendDataBaudRateCheck(frame);
 }
 
-// 毫米波雷达 - 设置信息
-void AppProtocolSetAddr::MmwRadarSetInfo(uint8_t value, uint8_t addr)
+// 面板设备获取信息
+void AppProtocolSetAddr::AddrGetInfo()
 {
-    // QByteArray data = BuildDevInfoData(0x03, 0x03, value, addr, 0x00);
-    // SendDataBaudRateCheck(BuildFrame(data));
+    QByteArray frame = BuildFrameAddr(m_panelAddr, GET_DEV_INFO);
+    SendDataBaudRateCheck(frame);
 }
 
 // 设置设备信息
 void AppProtocolSetAddr::SetInfo(uint8_t dev_type, uint8_t set_type, uint8_t addr, const QByteArray &value)
 {
-    QByteArray data = BuildDevInfoData( dev_type,  set_type,   addr,   value);
+    QByteArray data = BuildDevInfoData(dev_type, set_type, addr, value);
 
     SendDataBaudRateCheck(BuildFrame(data));
 }
-void AppProtocolSetAddr::SetInfo(uint8_t dev_type, uint8_t set_type,  uint8_t addr, uint8_t value)
+void AppProtocolSetAddr::SetInfo(uint8_t dev_type, uint8_t set_type, uint8_t addr, uint8_t value)
 {
     QByteArray data;
     data.append(static_cast<char>(value));
@@ -122,10 +119,16 @@ QByteArray AppProtocolSetAddr::BuildFrameAddr(uint8_t addr, uint8_t cmd_type)
     frame[1] = static_cast<char>(FRAME_TX_FH_2);
     frame[2] = static_cast<char>(0x03); // 有效数据固定4个字节
     frame[3] = static_cast<char>(cmd_type);
+    if (cmd_type == GET_DEV_INFO) {
 
-    frame[4] = static_cast<char>(0x1B);
-    frame[5] = static_cast<char>(0x2C);
-    frame[6] = static_cast<char>(addr);
+        frame[4] = static_cast<char>(0x00);
+        frame[5] = static_cast<char>(0x00);
+        frame[6] = static_cast<char>(addr);
+    } else {
+        frame[4] = static_cast<char>(0x1B);
+        frame[5] = static_cast<char>(0x2C);
+        frame[6] = static_cast<char>(addr);
+    }
 
     frame[7] = static_cast<char>(FRAME_TAIL_1);
     frame[8] = static_cast<char>(FRAME_TAIL_2);
@@ -138,8 +141,7 @@ QByteArray AppProtocolSetAddr::BuildFrame(const QByteArray &data)
 {
     QByteArray frame;
 
-    if (data.isEmpty())
-    {
+    if (data.isEmpty()) {
         return frame;
     }
 
@@ -148,11 +150,11 @@ QByteArray AppProtocolSetAddr::BuildFrame(const QByteArray &data)
     frame.append(static_cast<char>(FRAME_TX_FH_1));
     frame.append(static_cast<char>(FRAME_TX_FH_2));
 
-    frame.append(static_cast<char>(len));  // 长度
-    frame.append(data);                    // 有效数据
+    frame.append(static_cast<char>(len)); // 长度
+    frame.append(data);                   // 有效数据
 
     frame.append(static_cast<char>(FRAME_TAIL_1));
     frame.append(static_cast<char>(FRAME_TAIL_2));
-
+    qDebug() << frame.toHex(' ');
     return frame;
 }

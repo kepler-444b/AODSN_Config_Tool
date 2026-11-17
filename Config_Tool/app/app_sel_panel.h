@@ -21,9 +21,12 @@ typedef struct
     QVector<bool> key_enable;   // 按键勾选状态
     QVector<bool> key_state;    // 对应状态勾选状态
 
+    bool lum_enable;            // 亮度值使能
+    uint8_t lum_value;          // 亮度值
+    bool cct_enable;            // 色温值使能
+    uint8_t cct_value;          // 色温值
+
 } PanelInfo_t;
-
-
 
 namespace Ui {
 class DialogPanel;

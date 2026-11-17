@@ -1,9 +1,8 @@
 #include "app_sel_timer.h"
 #include "ui_app_sel_timer.h"
 
-DialogTimer::DialogTimer(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::DialogTimer)
+DialogTimer::DialogTimer(QWidget *parent) : QDialog(parent),
+                                            ui(new Ui::DialogTimer)
 {
     ui->setupUi(this);
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
@@ -25,7 +24,7 @@ void DialogTimer::on_set_timer_task_clicked()
 {
     QByteArray payload(sizeof(timer_task_t) * TIMER_TASK_MAX, 0);
 
-    timer_task_t* tasks = reinterpret_cast<timer_task_t*>(payload.data());
+    timer_task_t *tasks = reinterpret_cast<timer_task_t *>(payload.data());
 
     for (int i = 0; i < TIMER_TASK_MAX; i++) {
 
@@ -34,10 +33,10 @@ void DialogTimer::on_set_timer_task_clicked()
         QString minName     = QString("min_%1").arg(i + 1);
         QString checkName   = QString("checkBox_%1").arg(i + 1);
 
-        auto sceneIdEdit = findChild<QLineEdit*>(sceneIdName);
-        auto hourEdit    = findChild<QLineEdit*>(hourName);
-        auto minEdit     = findChild<QLineEdit*>(minName);
-        auto checkBox    = findChild<QCheckBox*>(checkName);
+        auto sceneIdEdit = findChild<QLineEdit *>(sceneIdName);
+        auto hourEdit    = findChild<QLineEdit *>(hourName);
+        auto minEdit     = findChild<QLineEdit *>(minName);
+        auto checkBox    = findChild<QCheckBox *>(checkName);
 
         tasks[i].id       = i;
         tasks[i].scene_id = sceneIdEdit ? sceneIdEdit->text().toUInt() : 0xFF;
@@ -60,50 +59,51 @@ void DialogTimer::on_set_timer_task_clicked()
                 if (tasks[i].hour == tasks[j].hour && tasks[i].min == tasks[j].min) {
                     // 弹出警告提示框
                     QMessageBox::warning(
-                                this,
-                                tr("错误"),
-                                QString(tr("任务 %1 与 任务 %2 的时间冲突(%3:%4),请重新设置!"))
-                                .arg(i + 1)
-                                .arg(j + 1)
-                                .arg(tasks[i].hour, 2, 10, QChar('0'))
-                                .arg(tasks[i].min, 2, 10, QChar('0'))
-                                );
+                        this,
+                        tr("错误"),
+                        QString(tr("任务 %1 与 任务 %2 的时间冲突(%3:%4),请重新设置!"))
+                            .arg(i + 1)
+                            .arg(j + 1)
+                            .arg(tasks[i].hour, 2, 10, QChar('0'))
+                            .arg(tasks[i].min, 2, 10, QChar('0')));
                     return; // 发现冲突,直接终止函数,不发送信号
                 }
             }
         }
     }
-
     emit sigSetTimerTask(payload);
 }
 
-void DialogTimer::setDisplay(const timer_task_t* tasks)
+// 更新显示内容
+void DialogTimer::setDisplay(const timer_task_t *tasks)
 {
-    for(int i = 0; i < TIMER_TASK_MAX; i++) {
 
-        QString sceneIdName = QString("scene_id_%1").arg(i + 1);
-        QString hourName = QString("hour_%1").arg(i + 1);
-        QString minName = QString("min_%1").arg(i + 1);
+    for (int i = 0; i < TIMER_TASK_MAX; i++) {
+
+        QString sceneIdName  = QString("scene_id_%1").arg(i + 1);
+        QString hourName     = QString("hour_%1").arg(i + 1);
+        QString minName      = QString("min_%1").arg(i + 1);
         QString checkBoxName = QString("checkBox_%1").arg(i + 1);
 
         // 查找对应的控件
-        QLineEdit* sceneIdEdit = findChild<QLineEdit*>(sceneIdName);
-        QLineEdit* hourEdit = findChild<QLineEdit*>(hourName);
-        QLineEdit* minEdit = findChild<QLineEdit*>(minName);
-        QCheckBox* enableCheckBox = findChild<QCheckBox*>(checkBoxName);
+        QComboBox *sceneIdCombo   = findChild<QComboBox *>(sceneIdName);
+        QLineEdit *hourEdit       = findChild<QLineEdit *>(hourName);
+        QLineEdit *minEdit        = findChild<QLineEdit *>(minName);
+        QCheckBox *enableCheckBox = findChild<QCheckBox *>(checkBoxName);
 
         // 处理Flash中的0xFF值,转换为0（所有字段都是uint8_t）
-        uint8_t scene_id = (tasks[i].scene_id == 0xFF) ? 0 : tasks[i].scene_id;
-        uint8_t hour = (tasks[i].hour == 0xFF) ? 0 : tasks[i].hour;
-        uint8_t min = (tasks[i].min == 0xFF) ? 0 : tasks[i].min;
-        uint8_t enable = (tasks[i].enable == 0xFF) ? 0 : tasks[i].enable;
+        uint8_t scene_id = tasks[i].scene_id;
+        uint8_t hour = tasks[i].hour;
+        uint8_t min = tasks[i].min;
+        uint8_t enable = tasks[i].enable;
 
         // 设置数值到控件
-        if (sceneIdEdit) {
-            if (scene_id <= 127) {
-                sceneIdEdit->setText(QString::number(scene_id));
-            } else {
-                sceneIdEdit->clear();
+        if (sceneIdCombo) {
+            if (scene_id <= 95) {
+                int index = sceneIdCombo->findData(scene_id);
+                sceneIdCombo->setCurrentIndex(index >= 0 ? index : 0);
+            } else if (scene_id == 0xFF) {
+                sceneIdCombo->setCurrentIndex(0);
             }
         }
 
@@ -129,3 +129,22 @@ void DialogTimer::setDisplay(const timer_task_t* tasks)
     }
 }
 
+// 更新场景列表
+void DialogTimer::updateSceneList(const QVector<scene_save_t> &scenes)
+{
+    m_sceneList = scenes;
+
+    for (int i = 0; i < TIMER_TASK_MAX; i++) {
+        QComboBox *comboBox = findChild<QComboBox *>(QString("scene_id_%1").arg(i + 1));
+        if (!comboBox)
+            continue;
+
+        comboBox->clear();
+        comboBox->addItem("无", 0xFF);
+
+        for (const scene_save_t &scene : std::as_const(m_sceneList)) {
+            comboBox->addItem(QString("%1 - %2").arg(scene.scene_id).arg(scene.scene_name), scene.scene_id);
+        }
+        comboBox->setCurrentIndex(0);
+    }
+}

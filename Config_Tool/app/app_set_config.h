@@ -28,9 +28,9 @@
 
 #include "flow/flowlayout.h"
 
-#define MAX_PANEL  32
-#define MAX_LED     4
-#define MAX_RELAY   4
+#define MAX_PANEL  32    // 最大面板个数
+#define MAX_LED     8    // 最大LED扩展个数
+#define MAX_RELAY   7    // 最大RELAY扩展个数
 
 namespace Ui {
 class AppSetConfig;
@@ -52,6 +52,8 @@ public:
     void UpdatePanelKeyName(uint8_t panelId, int keyIndex, const QString& newAlias);
     void RemoveExtend(uint8_t id, ExtendType type);
 
+signals:
+    void ledExListChanged(const QVector<uint8_t>& list); // 通知旋钮面板更新led扩展设备
 
 private slots:
 
@@ -69,6 +71,7 @@ private slots:
 
     void on_time_cal_clicked();
 
+
 private:
     // 硬件网格布局与组件生成 (Hardware UI Generator)
     template<typename PanelType>
@@ -77,7 +80,7 @@ private:
     QWidget* CreateExtendWidget(const ExtendInfo_t& info); // 动态创建扩展包装
     void AddToLayout(QWidget* Widget);                     // 将生成的 Widget 塞入流式布局
 
-    bool IsPanelIdExist(uint8_t id) const;             // 校验面板通信地址是否冲突
+    bool IsPanelIdExist(uint8_t addr) const;           // 校验面板通信地址是否冲突
     bool IsExtendLedExist(ExtendInfo_t *info) const;   // 校验扩展模块通信地址是否冲突
 
     bool saveWidgets(const QString& filePath = "data.json");     // 读写本地:UI 树形结构
@@ -89,7 +92,10 @@ private:
     bool saveBindDatas(const QString &filePath);                 // 读写本地:按键/场景绑定映射
     bool loadBindDatas(const QString &filePath);                 // 还原本地:按键/场景绑定映射
 
-    void CreateListWindow();  // 初始化场景列表全局窗口
+    void CreateListWindow();      // 创建场景列表全局窗口
+    void CreateTimerTaskWindow(); // 创建定时任务全局窗口
+
+    QVector<uint8_t> GetLedIdList(); // 获取 led 扩展ID的函数,用于旋钮复选led
 
     DialogTimer* m_timerSelDialog      = nullptr;
     DialogPanel* m_panelSelDialog      = nullptr;          // 弹窗:选择面板属性

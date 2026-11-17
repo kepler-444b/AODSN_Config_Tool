@@ -36,12 +36,13 @@ signals:
     void sendSimState(const panel_frame_t panel_data);
 
 private slots:
+    uint8_t frame_crc(const uint8_t *rxbuf, uint8_t len);
     void on_key_1_clicked();
     void on_key_2_clicked();
     void on_key_3_clicked();
 
 private:
-    void bulid_panel_frame(const uint8_t key_num);
+    void build_panel_frame(const uint8_t key_num);
     Ui::ModelPanel3Key *ui;
     QList<QPushButton*> m_buttons;
     QVector<scene_save_t> m_sceneList;

@@ -78,6 +78,11 @@
         <height>0</height>
        </size>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">QListWidget  {
     border: 1px solid #bdbdbd;
@@ -85,6 +90,9 @@
     padding: 3px;
     background-color: white;
 }</string>
+      </property>
+      <property name="lineWidth">
+       <number>1</number>
       </property>
       <item>
        <property name="text">
@@ -122,6 +130,11 @@
         <width>16777215</width>
         <height>16777215</height>
        </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
       </property>
       <property name="autoFillBackground">
        <bool>false</bool>

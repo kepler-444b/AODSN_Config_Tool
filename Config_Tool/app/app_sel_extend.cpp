@@ -21,6 +21,12 @@ void DialogExtend::on_led_ex_clicked()
     m_ExtendInfo.type = LED_EX;
 }
 
+// 选择led(双色温)扩展
+void DialogExtend::on_led_cct_ex_clicked()
+{
+    m_ExtendInfo.type = LED_CCT_EX;
+}
+
 // 选择继电器扩展
 void DialogExtend::on_relay_ex_clicked()
 {
@@ -42,11 +48,11 @@ ExtendInfo_t DialogExtend::GetExtendInfo() const
 
 void DialogExtend::on_set_addr_valueChanged(int arg1)
 {
-    if (arg1 > 4)
+    if (arg1 > 7)
     {
-        arg1 = 4;
-        ui->set_addr->setValue(4); // 强制拉回最大值
-        QMessageBox::warning(this, "提示", "地址不能大于4,已自动修改为4");
+        arg1 = 7;
+        ui->set_addr->setValue(7); // 强制拉回最大值
+        QMessageBox::warning(this, "提示", "地址不能大于7,已自动修改为7");
     }
     m_ExtendInfo.id = arg1;
 }
@@ -68,3 +74,5 @@ void DialogExtend::SetExtendInfo(const ExtendInfo_t &info)
         ui->led_ex->setChecked(true);
     }
 }
+
+

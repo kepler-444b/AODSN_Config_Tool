@@ -24,3 +24,23 @@ int main(int argc, char *argv[])
 
     return a.exec();
 }
+
+
+// #include <QApplication>
+// #include <QIcon>
+// #include <QStyleFactory>
+
+// #include "app/app_serial.h"
+// int main(int argc, char *argv[])
+// {
+//     QApplication a(argc, argv);
+
+//     a.setWindowIcon(QIcon(":/app/app.ico"));
+//     a.setStyle(QStyleFactory::create("windowsvista"));
+
+//     AppSerial serial;
+//     serial.show();
+
+//     return a.exec();
+// }
+

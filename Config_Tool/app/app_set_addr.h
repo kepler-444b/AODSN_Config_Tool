@@ -34,7 +34,6 @@ public:
 
     void recvDevInfo(const QByteArray data);
 
-
 private slots:
     void onSendTimeout();
     void on_spinBox_valueChanged(int addr); // 灯控面板地址更新
@@ -62,12 +61,10 @@ private slots:
     void initRadarCheckBox();
     void onRadarCheckChanged(bool checked);
 
+    void on_get_radar_info_clicked(); // 毫米波雷达获取信息
+    void on_set_radar_info_clicked(); // 毫米波雷达设置信息
 
-
-    void on_get_radar_info_clicked();
-    void on_set_radar_info_clicked();
-
-    void on_device_sel_activated(int index);
+    void on_device_sel_activated(int index); // 设备选择
 
 private:
     Ui::AppSetAddr *ui;

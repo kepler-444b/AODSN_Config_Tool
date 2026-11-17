@@ -19,13 +19,27 @@ DialogPanel::~DialogPanel()
 void DialogPanel::on_knob_clicked()
 {
     m_PanelInfo.type = KNOB;
+    m_PanelInfo.key_num = 4;
+
+    // 选择"旋钮面板"时,按键数选项设置为不可用
+    ui->key_1->setEnabled(false);
+    ui->key_2->setEnabled(false);
+    ui->key_3->setEnabled(false);
+    ui->key_4->setEnabled(false);
+    ui->key_6->setEnabled(false);
 }
 
 void DialogPanel::on_panel_clicked()
 {
     m_PanelInfo.type = PANEL;
-}
 
+    // 选择"灯控面板"时,按键数选项设置为可用
+    ui->key_1->setEnabled(true);
+    ui->key_2->setEnabled(true);
+    ui->key_3->setEnabled(true);
+    ui->key_4->setEnabled(true);
+    ui->key_6->setEnabled(true);
+}
 
 // 选择按键个数
 void DialogPanel::on_key_1_clicked()
@@ -64,6 +78,7 @@ void DialogPanel::on_set_addr_valueChanged(int arg1)
     m_PanelInfo.addr = arg1;
 }
 
+// 获取当前面板的信息
 PanelInfo_t DialogPanel::GetPanelInfo() const
 {
     return m_PanelInfo;
@@ -74,6 +89,7 @@ void DialogPanel::on_pushButton_clicked()
     accept();
 }
 
+// 设置选择面板弹窗的选择情况
 void DialogPanel::SetPanelInfo(const PanelInfo_t &info)
 {
     m_PanelInfo = info;
@@ -86,6 +102,7 @@ void DialogPanel::SetPanelInfo(const PanelInfo_t &info)
     if (info.type == KNOB)
     {
         ui->knob->setChecked(true);
+
     }
     else if (info.type == PANEL)
     {

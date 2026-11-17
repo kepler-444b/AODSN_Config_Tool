@@ -21,8 +21,10 @@ public:
 
     // 接收原始数据
     void RecvDataParse(const QByteArray &data);
+
     void AddrSet(uint8_t addr); // 面板设备设置地址
     void AddrSendAll();         // 面板设备地址群发
+    void AddrGetInfo();         // 面板设备获取信息
 
     void TriacDeathValue(uint8_t value, uint8_t addr); // 4路可控硅调节死区值
     void TriacLumValue(uint8_t value,uint8_t addr);    // 4路可控硅调节亮度值
@@ -36,7 +38,6 @@ public:
     void SetInfo(uint8_t dev_type, uint8_t set_type, uint8_t addr, const QByteArray &value);
     void SetInfo(uint8_t dev_type, uint8_t set_type, uint8_t addr, const uint8_t value);
 
-    void MmwRadarSetInfo(uint8_t value, uint8_t addr); // 毫米波雷达设置地址
 
     void GetInfo(uint8_t dev_type, uint8_t addr);
 

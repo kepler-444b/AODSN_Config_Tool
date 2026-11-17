@@ -20,8 +20,9 @@ typedef struct
 typedef struct
 {
     uint8_t addr;
-    QVector<bool> led_enabled;     // 通道是否勾选
-    QVector<int>  led_value;       // 输入的亮度值 (0-100)
+    QVector<bool> led_enabled;   // 通道是否勾选
+    QVector<int>  led_lum;       // 输入的亮度值 (0-100)
+    QVector<int>  led_cct;       // 输入的色温值 (0-100)
 } led_data_t;
 
 typedef struct
@@ -40,8 +41,12 @@ typedef struct
     QString key_name[6];        // 按键别名
     QVector<bool> key_enable;   // 按键勾选状态
     QVector<bool> key_state;    // 对应状态勾选状态
-} panel_data_t;
 
+    bool lum_enable;      // 旋钮特有字段,使能亮度
+    uint8_t lum_value;    // 旋钮特有字段,亮度值
+    bool cct_enable;      // 旋钮特有字段,使能色温
+    uint8_t cct_value;    // 旋钮特有字段,色温值
+} panel_data_t;
 
 namespace Ui {
 class DialogSetScene;
@@ -58,7 +63,7 @@ public:
     void editScene(int id);
 
 public slots:
-    void on_send_config_result(bool success); // 用于接收 set_config 构造场景的结果
+    void send_config_result(bool success); // 用于接收 set_config 构造场景的结果
 
 signals:
     // 发送配置给 set_config 构造场景

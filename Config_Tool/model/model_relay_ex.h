@@ -25,11 +25,24 @@ public:
 
 signals:
     void requestDelete(uint8_t id, ExtendType type);
+    void sendSimRelayState(const uint8_t relay_num, bool status);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
+    void setRelayState(QPushButton *button, int state = -1);
 
 private slots:
+
+    void on_relay1_clicked();
+    void on_relay2_clicked();
+    void on_relay3_clicked();
+    void on_relay4_clicked();
+    void on_relay5_clicked();
+    void on_relay6_clicked();
+    void on_relay7_clicked();
+    void on_relay8_clicked();
+    void on_relay9_clicked();
+    void on_relay10_clicked();
 
 private:
     Ui::ModelRelayEx *ui;

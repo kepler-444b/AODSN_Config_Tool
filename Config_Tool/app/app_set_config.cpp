@@ -5,32 +5,34 @@
 #include "model/model_panel_3key.h"
 #include "model/model_panel_4key.h"
 #include "model/model_panel_6key.h"
+#include "model//model_panel_knob.h"
 #include "model/model_led_ex.h"
 #include "model/model_relay_ex.h"
 
-
-AppSetConfig::AppSetConfig(QWidget *parent, AppSerial* serialWidget) :
-    QWidget(parent),
-    ui(new Ui::AppSetConfig)
+AppSetConfig::AppSetConfig(QWidget *parent, AppSerial *serialWidget)
+    : QWidget(parent), ui(new Ui::AppSetConfig)
 {
-    ui->setupUi(this);                                                       // 将 .ui 文件中设计的控件部署到当前类上
+    ui->setupUi(this); // 将 .ui 文件中设计的控件部署到当前类上
     m_serialWidget = serialWidget;
 
     this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);     // 设置伸缩策略
     ui->scrollArea->setWidgetResizable(true);                                // 设置滚动区域
     m_flowLayout = new FlowLayout(ui->scrollAreaWidgetContents, 10, 10, 10); // 初始化流式布局管理器
 
-    m_protocol_set_config = new AppProtocolSetConfig(this, m_serialWidget);   // 创建协议数据实例
-    m_protocol_sim_state  = new AppProtocolSimState(this, m_protocol_set_config, m_serialWidget);
+    m_protocol_set_config = new AppProtocolSetConfig(this, m_serialWidget);                       // 创建协议数据梳理实例
+    m_protocol_sim_state  = new AppProtocolSimState(this, m_protocol_set_config, m_serialWidget); // 创建模拟状态实例
 
-    CreateListWindow(); // 创建场景列表
+    CreateListWindow();      // 创建场景列表
+    CreateTimerTaskWindow(); // 创建定时任务
+
     connect(m_serialWidget, &AppSerial::sigRecvPanelData, m_protocol_sim_state, &AppProtocolSimState::RecvPanelFrame, Qt::UniqueConnection);
     connect(m_serialWidget, &AppSerial::sigRecvData, m_protocol_set_config, &AppProtocolSetConfig::recv_serial_data, Qt::UniqueConnection);
     connect(m_sceneListWidget, &AppAllList::requestDeleteScene, m_protocol_set_config, &AppProtocolSetConfig::deleteScene);
     connect(m_sceneListWidget, &AppAllList::requsetDeleteBind, m_protocol_set_config, &AppProtocolSetConfig::deleteBind);
+    connect(m_sceneListWidget, &AppAllList::requsetDeleteBindKone, m_protocol_set_config, &AppProtocolSetConfig::deleteBindKnob);
 
     QTimer::singleShot(100, this, &AppSetConfig::autoLoadAllData);         // 加载上次保存的配置
-    QShortcut* shortcutSave = new QShortcut(QKeySequence("Ctrl+S"), this); // ctrl + s 触发保存快捷键
+    QShortcut *shortcutSave = new QShortcut(QKeySequence("Ctrl+S"), this); // ctrl + s 触发保存快捷键
     connect(shortcutSave, &QShortcut::activated, this, &AppSetConfig::on_save_data_clicked);
 }
 
@@ -39,34 +41,29 @@ AppSetConfig::~AppSetConfig()
     delete ui;
 }
 
-// 添加面板
+// 添加面板按键
 void AppSetConfig::on_add_panel_clicked()
 {
-    if (!m_panelSelDialog)
-    {
-        m_panelSelDialog = new DialogPanel(this);
+    if (!m_panelSelDialog) {
+        m_panelSelDialog = new DialogPanel(this); // 创建一个选择面板类型的弹窗实例
     }
+    m_panelSelDialog->SetPanelInfo(m_lastPanelInfo); // 将上次的选情况传入
 
-    m_panelSelDialog->SetPanelInfo(m_lastPanelInfo);
-
+    // 以模态方式打开此窗口,若返回的结果不是"确定"直接返回
     if (m_panelSelDialog->exec() != QDialog::Accepted)
         return;
 
-    PanelInfo_t info = m_panelSelDialog->GetPanelInfo();
+    PanelInfo_t info = m_panelSelDialog->GetPanelInfo(); // 获取当前面板的信息
 
-    if (IsPanelIdExist(info.addr))
-    {
+    if (IsPanelIdExist(info.addr)) { // 检查面板地址是否已经存在
         QMessageBox::warning(this, "警告", "地址已存在,请重新设置");
         return;
     }
-
-    if (m_panelCount >= MAX_PANEL)
-    {
+    if (m_panelCount >= MAX_PANEL) { // 检查面板个数是否到大上限
         qDebug() << "数组已满";
         return;
     }
-
-    QWidget* panelWidget = CreatePanelWidget(info);
+    QWidget *panelWidget = CreatePanelWidget(info);
     if (!panelWidget)
         return;
 
@@ -76,14 +73,13 @@ void AppSetConfig::on_add_panel_clicked()
     m_panelArray[m_panelCount] = info;
     m_panelCount++;
     m_lastPanelInfo = info;
-    m_ui_Changed = true;
+    m_ui_Changed    = true;
 }
 
 // 添加扩展
 void AppSetConfig::on_add_extend_clicked()
 {
-    if (!m_extendSelDialog)
-    {
+    if (!m_extendSelDialog) {
         m_extendSelDialog = new DialogExtend(this);
     }
     m_extendSelDialog->SetExtendInfo(m_lastExtendInfo);
@@ -91,8 +87,7 @@ void AppSetConfig::on_add_extend_clicked()
         return;
 
     ExtendInfo_t info = m_extendSelDialog->GetExtendInfo();
-    if (IsExtendLedExist(&info))
-    {
+    if (IsExtendLedExist(&info)) {
         QMessageBox::warning(this, "警告", "地址已存在,请重新设置");
         return;
     }
@@ -100,19 +95,21 @@ void AppSetConfig::on_add_extend_clicked()
     if (info.type == LED_EX) {
         if (m_ledCount >= MAX_LED) return;
         m_ledArray[m_ledCount++] = info;
-    }
-    else if (info.type == RELAY_EX) {
+    } else if (info.type == RELAY_EX) {
         if (m_relayCount >= MAX_RELAY) return;
         m_relayArray[m_relayCount++] = info;
+    } else if (info.type == LED_CCT_EX) {
+        if (m_ledCount >= MAX_LED) return;
+        m_ledArray[m_ledCount++] = info;
     }
 
-    QWidget* extendWidget = CreateExtendWidget(info);
+    QWidget *extendWidget = CreateExtendWidget(info);
     if (!extendWidget) return;
 
     AddToLayout(extendWidget);
 
     m_lastExtendInfo = info;
-    m_ui_Changed = true;
+    m_ui_Changed     = true;
 }
 
 // 点击"创建场景"按钮
@@ -136,58 +133,66 @@ void AppSetConfig::create_scene(int id)
     for (int i = 0; i < m_panelCount; ++i)
         panelList.append(m_panelArray[i]);
 
-    for (int i = 0; i < m_ledCount; i++)
-    {
+    for (int i = 0; i < m_ledCount; i++) {
         if (m_ledArray[i].type == LED_EX)
             extendlist.append(m_ledArray[i]);
     }
-    for (int i = 0; i <m_relayCount; i++)
-    {
+    for (int i = 0; i < m_relayCount; i++) {
         if (m_relayArray[i].type == RELAY_EX)
             extendlist.append(m_relayArray[i]);
     }
 
-    if (is_edit) // 是编辑场景
+    if (is_edit) // 编辑场景
     {
         config_data_t temp = m_protocol_set_config->getSceneConfigDataById(id);
 
-        scene_id   = temp.scene[0].scene_id;
-        scene_name = temp.scene[0].scene_name;
+        // 安全检查:防止场景数据为空时访问 temp.scene[0] 导致崩溃
+        if (!temp.scene.isEmpty()) {
+            scene_id   = temp.scene[0].scene_id;
+            scene_name = temp.scene[0].scene_name;
+        }
 
-        for (auto& panel : panelList)
-        {
-            auto it = std::find_if(temp.panel.begin(), temp.panel.end(), [&panel](const panel_save_t& savedPanel) {
+        // 恢复按键及旋钮数据
+        for (auto &panel : panelList) {
+            auto it = std::find_if(temp.panel.begin(), temp.panel.end(), [&panel](const panel_save_t &savedPanel) {
                 return panel.addr == savedPanel.panel_addr;
             });
 
-            if (it != temp.panel.end())
-            {
+            if (it != temp.panel.end()) {
+                // 恢复按键数据
                 panel.key_enable = it->key_enable;
                 panel.key_state  = it->key_state;
+
+                // 恢复面板类型与旋钮亮度色温数据
+                panel.type = it->panel_type; // 确保面板类型同步 (0: KNOB, 1: PANEL)
+                if (it->panel_type == 0)     // 0 为 KNOB 旋钮面板
+                {
+                    panel.lum_enable = it->lum_enable;
+                    panel.lum_value  = it->lum_value;
+                    panel.cct_enable = it->cct_enable;
+                    panel.cct_value  = it->cct_value;
+                }
             }
         }
-        for (auto& extend : extendlist)
-        {
-            if (extend.type == ExtendType::LED_EX)
-            {
-                auto it = std::find_if(temp.led_ex.begin(), temp.led_ex.end(), [&extend](const led_save_t& savedLed) {
+
+        // 恢复LED扩展/继电器扩展
+        for (auto &extend : extendlist) {
+            if (extend.type == ExtendType::LED_EX) {
+                auto it = std::find_if(temp.led_ex.begin(), temp.led_ex.end(), [&extend](const led_save_t &savedLed) {
                     return extend.id == savedLed.led_addr;
                 });
 
-                if (it != temp.led_ex.end())
-                {
+                if (it != temp.led_ex.end()) {
                     extend.led_enable = it->led_enable;
-                    extend.led_value  = it->led_value;
+                    extend.led_lum    = it->led_lum;
+                    extend.led_cct    = it->led_cct;
                 }
-            }
-            else if (extend.type == ExtendType::RELAY_EX)
-            {
-                auto it = std::find_if(temp.relay_ex.begin(), temp.relay_ex.end(), [&extend](const relay_save_t& savedRelay) {
+            } else if (extend.type == ExtendType::RELAY_EX) {
+                auto it = std::find_if(temp.relay_ex.begin(), temp.relay_ex.end(), [&extend](const relay_save_t &savedRelay) {
                     return extend.id == savedRelay.relay_addr;
                 });
 
-                if (it != temp.relay_ex.end())
-                {
+                if (it != temp.relay_ex.end()) {
                     extend.relay_enable = it->relay_enable;
                     extend.relay_state  = it->relay_state;
                 }
@@ -195,34 +200,43 @@ void AppSetConfig::create_scene(int id)
         }
     }
 
-    if (m_set_sceneDialog)
-    {
+    if (m_set_sceneDialog) {
         delete m_set_sceneDialog;
         m_set_sceneDialog = nullptr;
     }
 
     m_set_sceneDialog = new DialogSetScene(panelList, extendlist, scene_id, scene_name, nullptr);
-    connect(m_set_sceneDialog, &DialogSetScene::send_config, m_protocol_set_config, &AppProtocolSetConfig::recv_scene_data);                  // 连接信号,到prorocol_set_config中处理
-    connect(m_protocol_set_config, &AppProtocolSetConfig::recv_scene_data_result, m_set_sceneDialog, &DialogSetScene::on_send_config_result); // 连接信号,到prorocol_set_config中处理
+    connect(m_set_sceneDialog, &DialogSetScene::send_config, m_protocol_set_config, &AppProtocolSetConfig::recv_scene_data);               // 连接信号,到prorocol_set_config中处理
+    connect(m_protocol_set_config, &AppProtocolSetConfig::recv_scene_data_result, m_set_sceneDialog, &DialogSetScene::send_config_result); // 连接信号,到prorocol_set_config中处理
     m_set_sceneDialog->show();
 }
 
-template<typename PanelBase>
-QWidget* AppSetConfig::CreateSetupPanel(const PanelInfo_t& info)
+template <typename PanelBase>
+QWidget *AppSetConfig::CreateSetupPanel(const PanelInfo_t &info)
 {
     auto panel = new PanelBase(this); // 根据传入的类型创建对象
     panel->SetPanelAddr(info.addr);
 
+    // 旋钮面板专用接口
+    if constexpr (std::is_same_v<PanelBase, ModelPanelKnob>) {
+        // 旋钮面板需要 led 扩展列表
+        panel->updateLedExList(GetLedIdList());
+
+        // 后续LED变化自动更新
+        connect(this, &AppSetConfig::ledExListChanged, panel, &ModelPanelKnob::updateLedExList);
+        connect(panel, &PanelBase::requestBindKnobScene, m_protocol_set_config, &AppProtocolSetConfig::recv_bind_knob_data);
+        connect(m_protocol_set_config, &AppProtocolSetConfig::bindKnobListChaneged, panel, &ModelPanelKnob::updateLedSelect);
+    }
+
     // 连接信号
     connect(panel, &PanelBase::requestDelete, this, &AppSetConfig::RemovePanel);
     connect(panel, &PanelBase::keyNameChanged, this, &AppSetConfig::UpdatePanelKeyName);
-    connect(panel, &PanelBase::requestBindScene, m_protocol_set_config, &AppProtocolSetConfig::recv_bind_data);      // 连接信号,处理绑定信息
-    connect(m_protocol_set_config, &AppProtocolSetConfig::sceneListChanged, panel, &PanelBase::updateSceneList);      // 连接信号,当场景更新时,发送给PanelBase
-    panel->updateSceneList(m_protocol_set_config->getAllConfigData().scene);                                          // PanelBase在创建时,主动获取场景列表
+    connect(panel, &PanelBase::requestBindScene, m_protocol_set_config, &AppProtocolSetConfig::recv_bind_data);  // 连接信号,处理绑定信息
+    connect(m_protocol_set_config, &AppProtocolSetConfig::sceneListChanged, panel, &PanelBase::updateSceneList); // 连接信号,当场景更新时,发送给PanelBase
+    panel->updateSceneList(m_protocol_set_config->getAllConfigData().scene);                                     // PanelBase在创建时,主动获取场景列表
 
-    connect(panel, &PanelBase::sendSimState ,m_protocol_sim_state, &AppProtocolSimState::RecvSimPanelData);
+    connect(panel, &PanelBase::sendSimState, m_protocol_sim_state, &AppProtocolSimState::RecvSimPanelData);
     connect(m_protocol_sim_state, &AppProtocolSimState::SendPanelData, panel, &PanelBase::SetPanelState);
-
 
     // 设置按键名称
     QStringList names;
@@ -233,50 +247,72 @@ QWidget* AppSetConfig::CreateSetupPanel(const PanelInfo_t& info)
     return panel;
 }
 
-
 // 创建 panel
-QWidget* AppSetConfig::CreatePanelWidget(const PanelInfo_t& info)
+QWidget *AppSetConfig::CreatePanelWidget(const PanelInfo_t &info)
 {
-    switch (info.key_num)
+    if (info.type == PANEL) // 选择的是"灯控面板"
     {
-    case 1: return CreateSetupPanel<ModelPanel1Key>(info);
-    case 2: return CreateSetupPanel<ModelPanel2Key>(info);
-    case 3: return CreateSetupPanel<ModelPanel3Key>(info);
-    case 4: return CreateSetupPanel<ModelPanel4Key>(info);
-    case 6: return CreateSetupPanel<ModelPanel6Key>(info);
-    default:
-        qDebug() << "不支持的按键数量:" << info.key_num;
+        switch (info.key_num) {
+            case 1:
+                return CreateSetupPanel<ModelPanel1Key>(info);
+            case 2:
+                return CreateSetupPanel<ModelPanel2Key>(info);
+            case 3:
+                return CreateSetupPanel<ModelPanel3Key>(info);
+            case 4:
+                return CreateSetupPanel<ModelPanel4Key>(info);
+            case 6:
+                return CreateSetupPanel<ModelPanel6Key>(info);
+            default:
+                qDebug() << "不支持的按键数量:" << info.key_num;
+                return nullptr;
+        }
+    } else if (info.type == KNOB) // 选择的是"旋钮面板"
+    {
+        return CreateSetupPanel<ModelPanelKnob>(info);
+    } else {
         return nullptr;
     }
 }
 
-
 // 创建扩展
-QWidget* AppSetConfig::CreateExtendWidget(const ExtendInfo_t& info)
+QWidget *AppSetConfig::CreateExtendWidget(const ExtendInfo_t &info)
 {
-
-    if (info.type == LED_EX)
-    {
+    if (info.type == LED_EX) {
         auto extend = new ModelLedEx(this);
         extend->SetExtendAddr(info.id, info.type);
         connect(extend, &ModelLedEx::requestDelete, this, &AppSetConfig::RemoveExtend);
         connect(m_protocol_sim_state, &AppProtocolSimState::SendExtendData, extend, &ModelLedEx::SetExtendSatae);
+        connect(extend, &ModelLedEx::sendSimLedState, m_protocol_sim_state, &AppProtocolSimState::RecvSimLedData);
+
+        emit ledExListChanged(GetLedIdList()); // led 扩展发生变化时,通知旋钮面板更新列表
         return extend;
-    }
-    else if (info.type == RELAY_EX)
-    {
+    } else if (info.type == RELAY_EX) {
         auto extend = new ModelRelayEx(this);
         extend->SetExtendAddr(info.id, info.type);
         connect(extend, &ModelRelayEx::requestDelete, this, &AppSetConfig::RemoveExtend);
         connect(m_protocol_sim_state, &AppProtocolSimState::SendExtendData, extend, &ModelRelayEx::SetExtendSatae);
+
+        connect(extend, &ModelRelayEx::sendSimRelayState, m_protocol_sim_state, &AppProtocolSimState::RecvSimRelayData);
         return extend;
     }
+
     return nullptr;
 }
 
+QVector<uint8_t> AppSetConfig::GetLedIdList()
+{
+    QVector<uint8_t> list;
+    for (int i = 0; i < m_ledCount; i++) {
+        if (m_ledArray[i].type == LED_EX) {
+            list.append(m_ledArray[i].id);
+        }
+    }
+    return list;
+}
 
 // 添加到布局
-void AppSetConfig::AddToLayout(QWidget* Widget)
+void AppSetConfig::AddToLayout(QWidget *Widget)
 {
     if (!Widget)
         return;
@@ -287,7 +323,7 @@ void AppSetConfig::AddToLayout(QWidget* Widget)
 void AppSetConfig::RemovePanel(uint8_t id)
 {
     // 利用 Qt 的信号发送者机制,直接拿到触发删除的那个 Widget 指针
-    QWidget* w = qobject_cast<QWidget*>(sender());
+    QWidget *w = qobject_cast<QWidget *>(sender());
     if (!w) return;
     m_ui_Changed = true;
     // 从布局中移除并销毁
@@ -295,10 +331,8 @@ void AppSetConfig::RemovePanel(uint8_t id)
     w->deleteLater();
 
     // 同步清理底层数据数组
-    for (int i = 0; i < m_panelCount; i++)
-    {
-        if (m_panelArray[i].addr == id)
-        {
+    for (int i = 0; i < m_panelCount; i++) {
+        if (m_panelArray[i].addr == id) {
             for (int j = i; j < m_panelCount - 1; j++)
                 m_panelArray[j] = m_panelArray[j + 1];
             m_panelCount--;
@@ -311,7 +345,7 @@ void AppSetConfig::RemovePanel(uint8_t id)
 // 删除扩展
 void AppSetConfig::RemoveExtend(uint8_t id, ExtendType type)
 {
-    QWidget* w = qobject_cast<QWidget*>(sender());
+    QWidget *w = qobject_cast<QWidget *>(sender());
     if (!w) return;
     m_ui_Changed = true;
     m_flowLayout->removeWidget(w);
@@ -321,45 +355,45 @@ void AppSetConfig::RemoveExtend(uint8_t id, ExtendType type)
         for (int i = 0; i < m_ledCount; i++) {
             if (m_ledArray[i].id == id) {
                 for (int j = i; j < m_ledCount - 1; j++) m_ledArray[j] = m_ledArray[j + 1];
-                m_ledCount--; break;
+                m_ledCount--;
+                break;
             }
         }
-    }
-    else if (type == RELAY_EX) {
+    } else if (type == RELAY_EX) {
         for (int i = 0; i < m_relayCount; i++) {
             if (m_relayArray[i].id == id) {
                 for (int j = i; j < m_relayCount - 1; j++) m_relayArray[j] = m_relayArray[j + 1];
-                m_relayCount--; break;
+                m_relayCount--;
+                break;
             }
         }
     }
+    emit ledExListChanged(GetLedIdList()); // led 扩展发生变化时,通知旋钮面板更新列表
 }
 
 // 修改别名
-void AppSetConfig::UpdatePanelKeyName(uint8_t panelId, int keyIndex, const QString& newAlias)
+void AppSetConfig::UpdatePanelKeyName(uint8_t panelId, int keyIndex, const QString &newAlias)
 {
     if (keyIndex < 0 || keyIndex >= 6)
         return;
 
     // 更新 m_panelArray 中的数据
-    for (int i = 0; i < m_panelCount; ++i)
-    {
-        if (m_panelArray[i].addr == panelId)
-        {
+    for (int i = 0; i < m_panelCount; ++i) {
+        if (m_panelArray[i].addr == panelId) {
             m_panelArray[i].key_name[keyIndex] = newAlias;
-            m_ui_Changed = true;
-            qDebug() << QString("更新面板 %1 的按键 %2 别名: %3").arg(panelId).arg(keyIndex+1).arg(newAlias);
+            m_ui_Changed                       = true;
+            qDebug() << QString("更新面板 %1 的按键 %2 别名: %3").arg(panelId).arg(keyIndex + 1).arg(newAlias);
             return;
         }
     }
     qDebug() << "未找到面板ID:" << panelId;
 }
 
-// id是否存在
-bool AppSetConfig::IsPanelIdExist(uint8_t id) const
+// 面板地址是否已经存在
+bool AppSetConfig::IsPanelIdExist(uint8_t addr) const
 {
     for (int i = 0; i < m_panelCount; ++i) {
-        if (m_panelArray[i].addr == id) {
+        if (m_panelArray[i].addr == addr) {
             return true;
         }
     }
@@ -368,12 +402,11 @@ bool AppSetConfig::IsPanelIdExist(uint8_t id) const
 
 bool AppSetConfig::IsExtendLedExist(ExtendInfo_t *info) const
 {
-    if (info->type == LED_EX) {
+    if (info->type == LED_EX || info->type == LED_CCT_EX) {
         for (int i = 0; i < m_ledCount; ++i) {
             if (m_ledArray[i].id == info->id) return true;
         }
-    }
-    else if (info->type == RELAY_EX) {
+    } else if (info->type == RELAY_EX) {
         for (int i = 0; i < m_relayCount; ++i) {
             if (m_relayArray[i].id == info->id) return true;
         }
@@ -381,52 +414,62 @@ bool AppSetConfig::IsExtendLedExist(ExtendInfo_t *info) const
     return false;
 }
 
-
 // 创建场景列表
 void AppSetConfig::CreateListWindow()
 {
-    if (!m_sceneListWidget)
-    {
-        m_sceneListWidget = new AppAllList(nullptr);
+    if (!m_sceneListWidget) {
+        m_sceneListWidget = new AppAllList(nullptr); // 传入nullptr,使其成为一个独立的窗口
 
-        connect(m_sceneListWidget, &QWidget::destroyed, this, [this]() {m_sceneListWidget = nullptr;}); // 当窗口关闭时,将指针置空
-        connect(m_sceneListWidget, &AppAllList::requestSendSceneData,  m_protocol_set_config, &AppProtocolSetConfig::sendSceneData);    // 下发设备场景
-        connect(m_sceneListWidget, &AppAllList::requestSendBindData, m_protocol_set_config, &AppProtocolSetConfig::sendBindData);       // 下发设备绑定
+        QRect screenRect  = QGuiApplication::primaryScreen()->availableGeometry();         // 获取屏幕尺寸
+        m_sceneListWidget->move(screenRect.center() - m_sceneListWidget->rect().center()); // 居中显示
 
-        connect(m_sceneListWidget, &AppAllList::requestClearSceneData,  m_protocol_set_config, &AppProtocolSetConfig::sendClearSceneData); // 删除设备场景
-        connect(m_sceneListWidget, &AppAllList::requestClearBindData, m_protocol_set_config, &AppProtocolSetConfig::sendClearBindData);    // 删除设备绑定
+        connect(m_sceneListWidget, &QWidget::destroyed, this, [this]() { m_sceneListWidget = nullptr; }); // 当窗口销毁时,将指针置空
 
-        connect(m_sceneListWidget, &AppAllList::requestEditScene, this, &AppSetConfig::create_scene);
+        connect(m_sceneListWidget, &AppAllList::requestSendSceneData, m_protocol_set_config, &AppProtocolSetConfig::sendSceneData);           // 下发扩展设备场景
+        connect(m_sceneListWidget, &AppAllList::requestSendPanelSceneData, m_protocol_set_config, &AppProtocolSetConfig::sendPanelSceneData); // 下发面板设备场景
+        connect(m_sceneListWidget, &AppAllList::requestSendBindData, m_protocol_set_config, &AppProtocolSetConfig::sendBindData);             // 下发按键绑定
+        connect(m_sceneListWidget, &AppAllList::requestSendBindKnobData, m_protocol_set_config, &AppProtocolSetConfig::sendBindKnobData);     // 下发旋钮绑定
 
-        connect(m_protocol_set_config, &AppProtocolSetConfig::sceneListChanged, m_sceneListWidget, &AppAllList::setSceneData); // 连接场景数据
-        connect(m_protocol_set_config, &AppProtocolSetConfig::bindListChanged,m_sceneListWidget, &AppAllList::setBindData);    // 连接绑定数据
+        connect(m_sceneListWidget, &AppAllList::requestClearSceneData, m_protocol_set_config, &AppProtocolSetConfig::sendClearSceneData);       // 删除设备场景
+        connect(m_sceneListWidget, &AppAllList::requestClearBindData, m_protocol_set_config, &AppProtocolSetConfig::sendClearBindData);         // 删除按键绑定
+        connect(m_sceneListWidget, &AppAllList::requestClearBindKnobData, m_protocol_set_config, &AppProtocolSetConfig::sendClearBindKnobData); // 删除旋钮绑定
+
+        connect(m_protocol_set_config, &AppProtocolSetConfig::sceneListChanged, m_sceneListWidget, &AppAllList::setSceneData);        // 连接场景数据
+        connect(m_protocol_set_config, &AppProtocolSetConfig::bindListChanged, m_sceneListWidget, &AppAllList::setBindData);          // 连接绑定按键数据
+        connect(m_protocol_set_config, &AppProtocolSetConfig::bindKnobListChaneged, m_sceneListWidget, &AppAllList::setBindKnobData); // 连接绑定旋钮数据
+
+        connect(m_sceneListWidget, &AppAllList::requestEditScene, this, &AppSetConfig::create_scene); // 连接"编辑场景"信号到"创建场景"界面
     }
 }
 
-// 打开场景列表
+// 打开场景列表窗口
 void AppSetConfig::on_scene_list_clicked()
 {
-    CreateListWindow();
-    if (m_sceneListWidget)
-    {
+    if (m_sceneListWidget) {
         m_sceneListWidget->show();
-        m_sceneListWidget->raise();
         m_sceneListWidget->activateWindow();
     }
 }
 
-// 打开定时任务
+// 创建定时任务列表
+void AppSetConfig::CreateTimerTaskWindow()
+{
+    if (!m_timerSelDialog) {
+        m_timerSelDialog = new DialogTimer(this);
+        connect(m_timerSelDialog, &DialogTimer::sigGetTimerTask, m_protocol_set_config, &AppProtocolSetConfig::sendGetTimerTask); // 获取定时任务
+        connect(m_timerSelDialog, &DialogTimer::sigSetTimerTask, m_protocol_set_config, &AppProtocolSetConfig::sendSetTimerTask); // 下发定时任务
+        connect(m_protocol_set_config, &AppProtocolSetConfig::sigUpdate, m_timerSelDialog, &DialogTimer::setDisplay);             // 更新控件显示
+        connect(m_protocol_set_config, &AppProtocolSetConfig::sceneListChanged, m_timerSelDialog, &DialogTimer::updateSceneList); // 更新场景列表
+    }
+}
+
+// 打开定时任务弹窗
 void AppSetConfig::on_timer_task_clicked()
 {
-    if (!m_timerSelDialog)
-    {
-        m_timerSelDialog = new DialogTimer(this);
-        connect(m_timerSelDialog, &DialogTimer::sigGetTimerTask,  m_protocol_set_config, &AppProtocolSetConfig::sendGetTimerTask);    // 获取定时任务
-        connect(m_timerSelDialog, &DialogTimer::sigSetTimerTask, m_protocol_set_config, &AppProtocolSetConfig::sendSetTimerTask);     // 下发定时任务
-        connect(m_protocol_set_config, &AppProtocolSetConfig::sigUpdate, m_timerSelDialog, &DialogTimer::setDisplay);                 // 更新控件显示
+    if (m_timerSelDialog) {
+        m_timerSelDialog->exec();
+        m_timerSelDialog->activateWindow();
     }
-    if (m_timerSelDialog->exec() != QDialog::Accepted)
-        return;
 }
 
 // 校准时间
@@ -438,13 +481,12 @@ void AppSetConfig::on_time_cal_clicked()
 
     while (true) {
         input_text = QInputDialog::getText(
-                    this,
-                    tr("校准时间"),
-                    tr("请输入时间 yyyy-MM-dd HH:mm:ss"),
-                    QLineEdit::Normal,
-                    input_text, // 如果输错循环了，这里会保留用户输错的文本
-                    &ok
-                    );
+            this,
+            tr("校准时间"),
+            tr("请输入时间 yyyy-MM-dd HH:mm:ss"),
+            QLineEdit::Normal,
+            input_text, // 如果输错循环了，这里会保留用户输错的文本
+            &ok);
 
         if (!ok) {
             break; // 点取消,直接退出函数
@@ -466,15 +508,20 @@ void AppSetConfig::on_time_cal_clicked()
 void AppSetConfig::CloseListWidget()
 {
     if (m_sceneListWidget) {
+        m_sceneListWidget->disconnect();
         m_sceneListWidget->close();
+        m_sceneListWidget->deleteLater();
         m_sceneListWidget = nullptr;
     }
 }
 
+// 关闭设置/编辑场景界面
 void AppSetConfig::CloseSceneDialog()
 {
-    if (m_set_sceneDialog){
+    if (m_set_sceneDialog) {
+        m_set_sceneDialog->disconnect();
         m_set_sceneDialog->close();
+        m_set_sceneDialog->deleteLater();
         m_set_sceneDialog = nullptr;
     }
 }
@@ -482,11 +529,10 @@ void AppSetConfig::CloseSceneDialog()
 bool AppSetConfig::ConfigIsChanged()
 {
     bool ok = false;
-    if(m_ui_Changed == true) { // UI 界面发生变化
+    if (m_ui_Changed == true) { // UI 界面发生变化
         ok = true;
     }
-    if (m_protocol_set_config && m_protocol_set_config->configIsChanged())
-    {
+    if (m_protocol_set_config && m_protocol_set_config->configIsChanged()) {
         ok = true;
     }
     return ok;
@@ -500,7 +546,8 @@ void AppSetConfig::on_new_data_clicked()
 
     // 让用户选择“新文件路径 + 文件名”
     QString filePath = QFileDialog::getSaveFileName(this, "新建配置文件", defaultPath, "JSON Files (*.json);;All Files (*.*)");
-
+    QString fileName = QFileInfo(filePath).fileName(); // 获取文件名称
+    ui->file_name->setText(fileName);
     if (filePath.isEmpty())
         return;
 
@@ -510,7 +557,7 @@ void AppSetConfig::on_new_data_clicked()
 
     // 创建一个基础空结构 JSON
     QJsonObject root;
-    root["config"] = QJsonObject();
+    root["config"]   = QJsonObject();
     root["protocol"] = QJsonObject();
 
     QFile file(filePath);
@@ -533,7 +580,7 @@ void AppSetConfig::on_new_data_clicked()
 
     // 清数据
     m_panelCount = 0;
-    m_ledCount = 0;
+    m_ledCount   = 0;
     m_relayCount = 0;
 
     // 清协议数据
@@ -550,14 +597,16 @@ void AppSetConfig::on_load_data_clicked()
 {
     QSettings settings("AODSN", "ConfigTool");
     QString defaultPath = settings.value("lastSavePath", "data.json").toString(); // 默认路径使用上次保存的路径
-
     QString filePath = QFileDialog::getOpenFileName(this, "加载配置信息", defaultPath, "JSON Files (*.json);;All Files (*.*)");
+    QString fileName = QFileInfo(filePath).fileName(); // 获取文件名称
+    ui->file_name->setText(fileName);
+
     if (filePath.isEmpty()) return;
 
     // 加载3部分数据 UI数据,场景数据,绑定数据
-    bool ok = loadWidgets(filePath) && loadSceneDatas(filePath)  && loadBindDatas(filePath);
+    bool ok = loadWidgets(filePath) && loadSceneDatas(filePath) && loadBindDatas(filePath);
 
-    if(ok) {
+    if (ok) {
         settings.setValue("lastSavePath", filePath); // 保存到 QSettings,确保下次可用
         QMessageBox::information(this, "加载成功", QString("配置已成功加载!\n%1个面板,%2个LED扩展,%3个继电器扩展").arg(m_panelCount).arg(m_ledCount).arg(m_relayCount));
     } else {
@@ -574,7 +623,9 @@ void AppSetConfig::on_save_data_clicked()
     QString filePath = QFileDialog::getSaveFileName(this, "保存配置信息", defaultPath, "JSON Files (*.json);;All Files (*.*)");
     if (filePath.isEmpty()) return;
 
-    bool ok = saveWidgets(filePath) && saveSceneDatas(filePath)  && saveBindDatas(filePath);
+    bool ok = (saveWidgets(filePath) &&    // 保存界面文件
+               saveSceneDatas(filePath) && // 保存场景信息
+               saveBindDatas(filePath));   // 保存绑定信息
 
     if (ok) {
         settings.setValue("lastSavePath", filePath); // 保存到 QSettings,确保下次可用
@@ -582,7 +633,7 @@ void AppSetConfig::on_save_data_clicked()
 
         // 保存成功后,清除改变标志位
         m_ui_Changed = false;
-        if(m_protocol_set_config) {
+        if (m_protocol_set_config) {
             m_protocol_set_config->clearConfigChanged();
         }
     } else {
@@ -591,14 +642,13 @@ void AppSetConfig::on_save_data_clicked()
 }
 
 // 保存界面文件
-bool AppSetConfig::saveWidgets(const QString& filePath)
+bool AppSetConfig::saveWidgets(const QString &filePath)
 {
     QFile file(filePath);
     QJsonObject root; // 创建一个空的 json 对象
 
     // 如果文件存在,先读取
-    if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text))
-    {
+    if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
         file.close();
         if (doc.isObject()) {
@@ -612,11 +662,11 @@ bool AppSetConfig::saveWidgets(const QString& filePath)
     // panel
     QJsonArray panelArray;
     for (int i = 0; i < m_panelCount; ++i) {
-        const auto& p = m_panelArray[i];
+        const auto &p = m_panelArray[i];
         QJsonObject obj{{"id", p.addr}, {"type", static_cast<int>(p.type)}, {"key_num", p.key_num}};
         QJsonArray keyNames;
 
-        for (const auto& name : p.key_name) {
+        for (const auto &name : p.key_name) {
             keyNames.append(name);
         }
         obj["key_name"] = keyNames;
@@ -627,7 +677,7 @@ bool AppSetConfig::saveWidgets(const QString& filePath)
     // led_ex
     QJsonArray ledArray;
     for (int i = 0; i < m_ledCount; ++i) {
-        const auto& led = m_ledArray[i];
+        const auto &led = m_ledArray[i];
         QJsonObject obj{{"id", led.id}, {"type", static_cast<int>(led.type)}};
         ledArray.append(obj);
     }
@@ -636,14 +686,14 @@ bool AppSetConfig::saveWidgets(const QString& filePath)
     // relay_ex
     QJsonArray relayArray;
     for (int i = 0; i < m_relayCount; ++i) {
-        const auto& relay = m_relayArray[i];
+        const auto &relay = m_relayArray[i];
         QJsonObject obj{{"id", relay.id}, {"type", static_cast<int>(relay.type)}};
         relayArray.append(obj);
     }
 
-    configObj["relay_ex"] = relayArray;
-    configObj["panel_count"] = m_panelCount;
-    configObj["led_ex_count"] = m_ledCount;
+    configObj["relay_ex"]       = relayArray;
+    configObj["panel_count"]    = m_panelCount;
+    configObj["led_ex_count"]   = m_ledCount;
     configObj["relay_ex_count"] = m_relayCount;
 
     root["config"] = configObj; // 放到顶层 config 对象下
@@ -664,23 +714,23 @@ void AppSetConfig::autoLoadAllData(void)
     QSettings settings("AODSN", "ConfigTool");
     QString lastFilePath = settings.value("lastSavePath").toString();
 
+    QString fileName = QFileInfo(lastFilePath).fileName(); // 获取文件名称
+    ui->file_name->setText(fileName);
+
     if (lastFilePath.isEmpty() || !QFile::exists(lastFilePath)) return;
 
     // 加载 UI 布局数据
-    if (loadWidgets(lastFilePath))
-    {
+    if (loadWidgets(lastFilePath)) {
         loadSceneDatas(lastFilePath);
         loadBindDatas(lastFilePath);
-    }
-    else
-    {
+    } else {
         qWarning() << "自动加载失败：" << lastFilePath;
         settings.remove("lastSavePath");
     }
 }
 
 // 加界面载文件
-bool AppSetConfig::loadWidgets(const QString& filePath)
+bool AppSetConfig::loadWidgets(const QString &filePath)
 {
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -716,16 +766,44 @@ bool AppSetConfig::loadWidgets(const QString& filePath)
 
     // 清空原有计数数据
     m_panelCount = 0;
-    m_ledCount = 0;
+    m_ledCount   = 0;
     m_relayCount = 0;
 
+    // relay_ex
+    for (const auto &val : config["relay_ex"].toArray()) {
+        if (m_relayCount >= MAX_RELAY) break;
+        auto obj = val.toObject();
+        ExtendInfo_t relay{};
+        relay.id                     = static_cast<uint8_t>(obj["id"].toInt());
+        relay.type                   = static_cast<ExtendType>(obj["type"].toInt());
+        m_relayArray[m_relayCount++] = relay;
+
+        if (auto widget = CreateExtendWidget(relay)) {
+            AddToLayout(widget);
+        }
+    }
+
+    // led_ex
+    for (const auto &val : config["led_ex"].toArray()) {
+        if (m_ledCount >= MAX_LED) break;
+        auto obj = val.toObject();
+        ExtendInfo_t led{};
+        led.id                   = static_cast<uint8_t>(obj["id"].toInt());
+        led.type                 = static_cast<ExtendType>(obj["type"].toInt());
+        m_ledArray[m_ledCount++] = led;
+
+        if (auto widget = CreateExtendWidget(led)) {
+            AddToLayout(widget);
+        }
+    }
+
     // panel
-    for (const auto& val : config["panel"].toArray()) {
+    for (const auto &val : config["panel"].toArray()) {
         if (m_panelCount >= MAX_PANEL) break;
 
         auto obj = val.toObject();
         PanelInfo_t p{};
-        p.addr      = static_cast<uint8_t>(obj["id"].toInt());
+        p.addr    = static_cast<uint8_t>(obj["id"].toInt());
         p.type    = static_cast<PanelType>(obj["type"].toInt());
         p.key_num = static_cast<uint8_t>(obj["key_num"].toInt());
 
@@ -740,34 +818,6 @@ bool AppSetConfig::loadWidgets(const QString& filePath)
         }
     }
 
-    // led_ex
-    for (const auto& val : config["led_ex"].toArray()) {
-        if (m_ledCount >= MAX_LED) break;
-        auto obj = val.toObject();
-        ExtendInfo_t led{};
-        led.id = static_cast<uint8_t>(obj["id"].toInt());
-        led.type = static_cast<ExtendType>(obj["type"].toInt());
-        m_ledArray[m_ledCount++] = led;
-
-        if (auto widget = CreateExtendWidget(led)) {
-            AddToLayout(widget);
-        }
-    }
-
-    // relay_ex
-    for (const auto& val : config["relay_ex"].toArray()) {
-        if (m_relayCount >= MAX_RELAY) break;
-        auto obj = val.toObject();
-        ExtendInfo_t relay{};
-        relay.id = static_cast<uint8_t>(obj["id"].toInt());
-        relay.type = static_cast<ExtendType>(obj["type"].toInt());
-        m_relayArray[m_relayCount++] = relay;
-
-        if (auto widget = CreateExtendWidget(relay)) {
-            AddToLayout(widget);
-        }
-    }
-
     return true;
 }
 
@@ -778,8 +828,7 @@ bool AppSetConfig::saveSceneDatas(const QString &filePath)
     QJsonObject root;
 
     // 读取原文件 JSON
-    if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text))
-    {
+    if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
         file.close();
         if (doc.isObject()) root = doc.object();
@@ -791,7 +840,7 @@ bool AppSetConfig::saveSceneDatas(const QString &filePath)
 
     // panel
     QJsonArray panelArray;
-    for (const auto &p :std::as_const(data.panel)) {
+    for (const auto &p : std::as_const(data.panel)) {
         QJsonObject obj;
         obj["scene_id"]      = p.scene_id;
         obj["scene_name"]    = p.scene_name;
@@ -810,13 +859,21 @@ bool AppSetConfig::saveSceneDatas(const QString &filePath)
         QJsonArray keyState;
         for (bool b : p.key_state) keyState.append(b);
         obj["key_state"] = keyState;
+
+        qDebug() << "p.panel_type" << p.panel_type;
+        if (p.panel_type == KNOB) { // 如果是旋钮面板,则有一下字段
+            obj["lum_enable"] = p.lum_enable;
+            obj["lum_value"]  = p.lum_value;
+            obj["cct_enable"] = p.cct_enable;
+            obj["cct_value"]  = p.cct_value;
+        }
         panelArray.append(obj);
     }
     protocolObj["panel"] = panelArray;
 
     // led_ex
     QJsonArray ledArray;
-    for (const auto &l :std::as_const(data.led_ex)) {
+    for (const auto &l : std::as_const(data.led_ex)) {
         QJsonObject obj;
         obj["scene_id"]   = l.scene_id;
         obj["scene_name"] = l.scene_name;
@@ -826,10 +883,13 @@ bool AppSetConfig::saveSceneDatas(const QString &filePath)
         for (bool b : l.led_enable) enabled.append(b);
         obj["led_enable"] = enabled;
 
-        QJsonArray values;
-        for (int v : l.led_value) values.append(v);
-        obj["led_value"] = values;
-
+        QJsonArray value;
+        for (int i = 0; i < l.led_lum.size(); ++i) // lum 和 cct 交错排列
+        {
+            value.append(l.led_lum[i]);
+            value.append(l.led_cct[i]);
+        }
+        obj["led_value"] = value;
         ledArray.append(obj);
     }
     protocolObj["led_ex"] = ledArray;
@@ -839,9 +899,9 @@ bool AppSetConfig::saveSceneDatas(const QString &filePath)
     for (const auto &l : std::as_const(data.relay_ex)) {
 
         QJsonObject obj;
-        obj["scene_id"]    = l.scene_id;
-        obj["scene_name"]  = l.scene_name;
-        obj["relay_addr"]  = l.relay_addr;
+        obj["scene_id"]   = l.scene_id;
+        obj["scene_name"] = l.scene_name;
+        obj["relay_addr"] = l.relay_addr;
 
         QJsonArray enabled;
         for (bool b : l.relay_enable) enabled.append(b);
@@ -855,7 +915,6 @@ bool AppSetConfig::saveSceneDatas(const QString &filePath)
     }
     protocolObj["relay_ex"] = relayArray;
 
-
     // scene_data
     QJsonArray sceneArray;
     for (const auto &s : std::as_const(data.scene)) {
@@ -865,7 +924,7 @@ bool AppSetConfig::saveSceneDatas(const QString &filePath)
         sceneArray.append(obj);
     }
     protocolObj["scene_data"] = sceneArray;
-    root["protocol"] = protocolObj; // 放到顶层 protocol 对象下
+    root["protocol"]          = protocolObj; // 放到顶层 protocol 对象下
 
     // 写回文件
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -877,7 +936,7 @@ bool AppSetConfig::saveSceneDatas(const QString &filePath)
     }
 }
 
-
+// 加载配置信息
 bool AppSetConfig::loadSceneDatas(const QString &filePath)
 {
     QFile file(filePath);
@@ -885,7 +944,6 @@ bool AppSetConfig::loadSceneDatas(const QString &filePath)
         qWarning() << "无法打开协议配置文件进行读取：" << filePath;
         return false;
     }
-
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
     file.close();
 
@@ -901,7 +959,6 @@ bool AppSetConfig::loadSceneDatas(const QString &filePath)
     QJsonObject protocolObj = root["protocol"].toObject();
     config_data_t data; // 准备装载数据的结构体
 
-    // panel
     QJsonArray panelArray = protocolObj["panel"].toArray();
     for (const auto &val : std::as_const(panelArray)) {
         QJsonObject obj = val.toObject();
@@ -912,10 +969,14 @@ bool AppSetConfig::loadSceneDatas(const QString &filePath)
         p.panel_type    = static_cast<uint8_t>(obj["panel_type"].toInt());
         p.panel_key_num = static_cast<uint8_t>(obj["panel_key_num"].toInt());
 
-        // 还原按键别名数组 QString[6]
+        // 初始化并还原按键别名数组 QString[6]
+        for (int i = 0; i < 6; ++i) {
+            p.panel_name[i] = "NULL"; // 默认先全部初始化为 "NULL"
+        }
         QJsonArray names = obj["key_name"].toArray();
-        for (int i = 0; i < names.size() && i < 6; ++i) {
-            p.panel_name[i] = names[i].toString();
+        for (int i = 0; i < names.size() && i < p.panel_key_num && i < 6; ++i) {
+            QString name    = names[i].toString();
+            p.panel_name[i] = name.isEmpty() ? "NULL" : name;
         }
 
         // 还原勾选状态 QVector<bool>
@@ -925,6 +986,13 @@ bool AppSetConfig::loadSceneDatas(const QString &filePath)
         QJsonArray keyState = obj["key_state"].toArray();
         for (const auto &b : std::as_const(keyState)) p.key_state.append(b.toBool());
 
+        // 解析旋钮面板的亮度和色温字段
+        if (p.panel_type == KNOB) { // KNOB == 0
+            p.lum_enable = obj["lum_enable"].toBool(false);
+            p.lum_value  = static_cast<uint8_t>(obj["lum_value"].toInt(0));
+            p.cct_enable = obj["cct_enable"].toBool(false);
+            p.cct_value  = static_cast<uint8_t>(obj["cct_value"].toInt(0));
+        }
         data.panel.append(p);
     }
 
@@ -941,14 +1009,16 @@ bool AppSetConfig::loadSceneDatas(const QString &filePath)
         for (const auto &b : std::as_const(enabled)) l.led_enable.append(b.toBool());
 
         QJsonArray values = obj["led_value"].toArray();
-        for (const auto &v : std::as_const(values)) l.led_value.append(v.toInt());
-
+        for (int i = 0; i + 1 < values.size(); i += 2) {
+            l.led_lum.append(values[i].toInt());
+            l.led_cct.append(values[i + 1].toInt());
+        }
         data.led_ex.append(l);
     }
 
     // relay_ex
     QJsonArray relayArray = protocolObj["relay_ex"].toArray();
-    for (const auto &val :std::as_const(relayArray)) {
+    for (const auto &val : std::as_const(relayArray)) {
 
         QJsonObject obj = val.toObject();
         relay_save_t r;
@@ -957,7 +1027,7 @@ bool AppSetConfig::loadSceneDatas(const QString &filePath)
         r.relay_addr = static_cast<uint8_t>(obj["relay_addr"].toInt());
 
         QJsonArray enabled = obj["relay_enable"].toArray();
-        for (const auto &b :std::as_const(enabled)) r.relay_enable.append(b.toBool());
+        for (const auto &b : std::as_const(enabled)) r.relay_enable.append(b.toBool());
 
         QJsonArray state = obj["relay_state"].toArray();
         for (const auto &v : std::as_const(state)) r.relay_state.append(v.toBool());
@@ -974,7 +1044,7 @@ bool AppSetConfig::loadSceneDatas(const QString &filePath)
         // 关键点：将 Hex 字符串还原为 QByteArray
         s.scene_data = QByteArray::fromHex(obj["scene_data"].toString().toUtf8());
         s.scene_name = obj["scene_name"].toString();
-        s.scene_id = s.scene_data[0];
+        s.scene_id   = s.scene_data[0];
         data.scene.append(s);
     }
 
@@ -983,7 +1053,6 @@ bool AppSetConfig::loadSceneDatas(const QString &filePath)
         m_protocol_set_config->setAllConfigData(data);
         return true;
     }
-
     return false;
 }
 
@@ -1003,18 +1072,34 @@ bool AppSetConfig::saveBindDatas(const QString &filePath)
     QJsonObject protocolObj = root["protocol"].toObject();
 
     // 准备绑定数据映射
-    bind_data_t allBindData = m_protocol_set_config->getAllBindData();
+    bind_data_t allBindData          = m_protocol_set_config->getAllBindData();
+    bind_knob_data_t allBindKnobData = m_protocol_set_config->getAllBindKnobData();
+
+    // 保存按键的场景绑定
     QJsonArray bindArray;
-    for (const auto &b :std::as_const(allBindData.bind_data)) {
+    for (const auto &b : std::as_const(allBindData.bind_data)) {
         QJsonObject obj;
         obj["scene_name"] = b.scene_name;
         obj["bind_data"]  = QString(b.bind_data.toHex());
         bindArray.append(obj);
     }
+    protocolObj["scene_bind_data"] = bindArray; // 只更新 protocol 里的 scene_bind_data 字段
 
-    // 只更新 protocol 里的 scene_bind_data 字段
-    protocolObj["scene_bind_data"] = bindArray;
-    root["protocol"] = protocolObj;
+    // 保存旋钮的场景绑定
+    QJsonArray bindKnobArray;
+    for (const auto &b : std::as_const(allBindKnobData.bind_knob_data)) {
+        QJsonObject obj;
+
+        obj["open_scene_name"]  = b.open_scene_name;
+        obj["close_scene_name"] = b.close_scene_name;
+        obj["bind_knob_data"]   = QString(b.bind_data.toHex());
+
+        bindKnobArray.append(obj);
+    }
+
+    protocolObj["scene_bind_knob_data"] = bindKnobArray;
+
+    root["protocol"] = protocolObj; // 更新 protocol
 
     // 写回文件
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -1050,33 +1135,50 @@ bool AppSetConfig::loadBindDatas(const QString &filePath)
     QJsonObject protocolObj = root["protocol"].toObject();
 
     // 在 protocol 内部查找 scene_bind_data
-    if (!protocolObj.contains("scene_bind_data") || !protocolObj["scene_bind_data"].isArray()) {
+    if (!protocolObj.contains("scene_bind_data") &&
+        protocolObj["scene_bind_data"].isArray()) {
         qWarning() << "protocol 节点下未找到 scene_bind_data 数组";
         return false;
     }
 
     QJsonArray bindArray = protocolObj["scene_bind_data"].toArray();
-    bind_data_t allBinds;
 
-    // 解析数组内容
-    for (const auto &val :std::as_const(bindArray)) {
-        QJsonObject obj = val.toObject();
-        bind_save_t item;
-        item.scene_name = obj["scene_name"].toString();
-        // 将 Hex 字符串还原为 QByteArray
-        item.bind_data  = QByteArray::fromHex(obj["bind_data"].toString().toUtf8());
-        allBinds.bind_data.append(item);
+    // 加载按键场景绑定
+    bind_data_t allBinds;
+    if (protocolObj.contains("scene_bind_data") && protocolObj["scene_bind_data"].isArray()) {
+        QJsonArray bindArray = protocolObj["scene_bind_data"].toArray();
+
+        for (const auto &val : std::as_const(bindArray)) {
+            QJsonObject obj = val.toObject();
+            bind_save_t item;
+            item.scene_name = obj["scene_name"].toString();
+            item.bind_data  = QByteArray::fromHex(obj["bind_data"].toString().toUtf8());
+            allBinds.bind_data.append(item);
+        }
     }
 
+    // 加载旋钮场景绑定
+    bind_knob_data_t allKnobBinds;
+    if (protocolObj.contains("scene_bind_knob_data") &&
+        protocolObj["scene_bind_knob_data"].isArray()) {
+        QJsonArray knobArray = protocolObj["scene_bind_knob_data"].toArray();
+        for (const auto &val : std::as_const(knobArray)) {
+            QJsonObject obj = val.toObject();
+            bind_save_knob_t item;
+            item.open_scene_name  = obj["open_scene_name"].toString();
+            item.close_scene_name = obj["close_scene_name"].toString();
+            item.bind_data        = QByteArray::fromHex(obj["bind_knob_data"].toString().toUtf8());
+            allKnobBinds.bind_knob_data.append(item);
+        }
+    }
     // 同步到协议管理器
     if (m_protocol_set_config) {
-        // 传递整个结构体
         m_protocol_set_config->setAllBindData(allBinds);
-        qDebug() << "成功加载绑定信息，共" << allBinds.bind_data.size() << "条";
+        m_protocol_set_config->setAllBindKnobData(allKnobBinds);
+
+        qDebug() << "加载按键绑定:" << allBinds.bind_data.size() << "条";
+        qDebug() << "加载旋钮绑定:" << allKnobBinds.bind_knob_data.size() << "条";
         return true;
     }
-
     return false;
 }
-
-
