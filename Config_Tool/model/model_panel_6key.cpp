@@ -49,7 +49,6 @@ void ModelPanel6Key::SetPanelState(const QByteArray &data)
     for (int i = 0; i < m_key_num; ++i) {
         int bit_val = (m_status >> i) & 1;
         bool status = !bit_val;
-
         int key_num = i + 1;
         QString buttonName = QString("key_%1").arg(key_num);
         QPushButton* btn = this->findChild<QPushButton*>(buttonName);

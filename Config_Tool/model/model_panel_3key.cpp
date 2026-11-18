@@ -1,17 +1,15 @@
 #include "model_panel_3key.h"
 #include "ui_model_panel_3key.h"
 
-ModelPanel3Key::ModelPanel3Key(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::ModelPanel3Key)
+ModelPanel3Key::ModelPanel3Key(QWidget *parent) : QWidget(parent),
+                                                  ui(new Ui::ModelPanel3Key)
 {
     ui->setupUi(this);
     m_buttons.clear();
     m_buttons.append(ui->key_1);
     m_buttons.append(ui->key_2);
     m_buttons.append(ui->key_3);
-    for (auto *const btn : std::as_const(m_buttons))
-    {
+    for (auto *const btn : std::as_const(m_buttons)) {
         btn->setCheckable(true);
         btn->installEventFilter(this);
     }
@@ -25,8 +23,7 @@ ModelPanel3Key::~ModelPanel3Key()
 void ModelPanel3Key::SetKeyNames(const QStringList &names)
 {
     int count = qMin(names.size(), m_buttons.size());
-    for (int i = 0; i < count; ++i)
-    {
+    for (int i = 0; i < count; ++i) {
         if (!names[i].isEmpty())
             m_buttons[i]->setText(names[i]);
     }
@@ -34,25 +31,38 @@ void ModelPanel3Key::SetKeyNames(const QStringList &names)
 
 void ModelPanel3Key::SetPanelState(const QByteArray &data)
 {
-    uint8_t sub_idx  = m_addr / PANEL_FRAME_RX_ADDR_LEN; // 在哪个 sub_frame 中
-    uint8_t addr_idx = m_addr % PANEL_FRAME_RX_ADDR_LEN; // 在该 sub_frame 中的第几个地址
+    uint8_t sub_idx   = m_addr / PANEL_FRAME_RX_ADDR_LEN;     // 在哪个 sub_frame 中
+    uint8_t addr_idx  = m_addr % PANEL_FRAME_RX_ADDR_LEN;     // 在该 sub_frame 中的第几个地址
     uint8_t sub_start = 4 + sub_idx * PANEL_FRAME_RX_SUB_LEN; // 子帧起始地址索引
 
-    uint8_t addr    = data[sub_start + (addr_idx * 3)];     // 每个按键的状态
+    uint8_t addr = data[sub_start + (addr_idx * 3)]; // 每个按键的状态
 
     m_status = addr ^ 0x3F;
 
     for (int i = 0; i < m_key_num; ++i) {
         int bit_val = (m_status >> i) & 1;
         bool status = !bit_val;
-
         int key_num = i + 1;
-        QString buttonName = QString("key_%1").arg(key_num);
-        QPushButton* btn = this->findChild<QPushButton*>(buttonName);
 
-        if (btn != nullptr) {
-            btn->setChecked(status); // 刷新界面状态
+        QString buttonName;
+
+        if (key_num == 1 || key_num == 3 || key_num == 5) { // 只更新对应的 QPushButton
+
+            if (key_num == 1) {
+                buttonName = "key_1";
+            }
+            if (key_num == 3) {
+                buttonName = "key_2";
+            }
+            if (key_num == 5) {
+                buttonName = "key_3";
+            }
+            QPushButton *btn = this->findChild<QPushButton *>(buttonName);
+            if (btn != nullptr) {
+                btn->setChecked(status);
+            }
         }
+
     }
 }
 
@@ -67,18 +77,17 @@ bool ModelPanel3Key::eventFilter(QObject *obj, QEvent *event)
     if (event->type() != QEvent::MouseButtonPress)
         return QWidget::eventFilter(obj, event);
 
-    auto btn = qobject_cast<QPushButton*>(obj);
+    auto btn = qobject_cast<QPushButton *>(obj);
     if (!btn || !m_buttons.contains(btn))
         return QWidget::eventFilter(obj, event);
 
-    auto e = static_cast<QMouseEvent*>(event);
+    auto e = static_cast<QMouseEvent *>(event);
     if (e->button() != Qt::RightButton)
         return QWidget::eventFilter(obj, event);
 
-    int keyIndex = 0;
+    int keyIndex    = 0;
     QString objName = btn->objectName();
-    if (objName.startsWith("key_"))
-    {
+    if (objName.startsWith("key_")) {
         bool ok = false;
         // 使用 QStringView 截取从下标 4 开始的子串（无内存分配）
         int num = QStringView(objName).mid(4).toInt(&ok);
@@ -87,21 +96,29 @@ bool ModelPanel3Key::eventFilter(QObject *obj, QEvent *event)
     }
     // 3键到6键映射关系
 
+    qDebug() << "keyIndex " <<keyIndex;
     QList<int> hwIndices;
     switch (keyIndex) {
-    case 0: hwIndices << 0 << 1; break; // 键1 -> 0, 1
-    case 1: hwIndices << 4 << 5; break; // 键2 -> 4, 5
-    case 2: hwIndices << 2 << 3; break; // 键3 -> 2, 3
-    default: hwIndices << keyIndex;      // 其他 -> 保持原样
+        case 0:
+            hwIndices << 0 << 1;
+            break; // 键1 -> 0, 1
+        case 1:
+            hwIndices << 4 << 5;
+            break; // 键3 -> 4, 5
+        case 2:
+            hwIndices << 2 << 3;
+            break; // 键2 -> 2, 3
+
+        default:
+            hwIndices << keyIndex; // 其他 -> 保持原样
     }
     QMenu menu(this);
     QAction *deleteAction = menu.addAction("删除该面板");
     QAction *renameAction = menu.addAction("修改按键别名");
 
-    auto addSceneActions = [this](QMenu* parentMenu) {
-        for (const auto &scene : std::as_const(m_sceneList))
-        {
-            QString text = QString("%1: %2").arg(scene.scene_id).arg(scene.scene_name);
+    auto addSceneActions = [this](QMenu *parentMenu) {
+        for (const auto &scene : std::as_const(m_sceneList)) {
+            QString text    = QString("%1: %2").arg(scene.scene_id).arg(scene.scene_name);
             QAction *action = parentMenu->addAction(text);
             action->setData(QVariant::fromValue(scene.scene_id));
         }
@@ -115,28 +132,22 @@ bool ModelPanel3Key::eventFilter(QObject *obj, QEvent *event)
 
     // 弹出菜单并处理选择
     QAction *selected = menu.exec(e->globalPosition().toPoint());
-    if (selected == renameAction)
-    {
+    if (selected == renameAction) {
         bool ok;
         QString text = QInputDialog::getText(this, "修改按键名称", "请输入新的名称：", QLineEdit::Normal, btn->text(), &ok);
-        if (ok && !text.isEmpty())
-        {
+        if (ok && !text.isEmpty()) {
             btn->setText(text);
             emit keyNameChanged(m_addr, keyIndex, text);
         }
-    }
-    else if (selected == deleteAction)
-    {
+    } else if (selected == deleteAction) {
         QMessageBox::StandardButton reply;
         reply = QMessageBox::question(this, "确认删除", "确定要删除该面板吗?", QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::Yes)
-        {
+        if (reply == QMessageBox::Yes) {
             emit requestDelete(m_addr);
         }
     }
     // 绑定开场景
-    else if (selected && selected->parent() == bindOpenMenu)
-    {
+    else if (selected && selected->parent() == bindOpenMenu) {
         uint8_t scene_id = selected->data().toUInt();
 
         for (int idx : std::as_const(hwIndices)) {
@@ -145,8 +156,7 @@ bool ModelPanel3Key::eventFilter(QObject *obj, QEvent *event)
     }
 
     // 绑定关场景
-    else if (selected && selected->parent() == bindCloseMenu)
-    {
+    else if (selected && selected->parent() == bindCloseMenu) {
         uint8_t sceneId = selected->data().toUInt();
 
         for (int idx : std::as_const(hwIndices)) {
@@ -168,35 +178,38 @@ void ModelPanel3Key::on_key_1_clicked()
 {
     ui->key_1->setChecked(!ui->key_1->isChecked()); // 状态回滚
     build_panel_frame(0);
+    qDebug() << "key_1";
 }
 
 void ModelPanel3Key::on_key_2_clicked()
 {
     ui->key_2->setChecked(!ui->key_2->isChecked()); // 状态回滚
-    build_panel_frame(1);
+    build_panel_frame(2);
+    qDebug() << "key_2";
 }
 
 void ModelPanel3Key::on_key_3_clicked()
 {
     ui->key_3->setChecked(!ui->key_3->isChecked()); // 状态回滚
-    build_panel_frame(2);
+    build_panel_frame(4);
+    qDebug() << "key_3";
 }
 
 void ModelPanel3Key::build_panel_frame(const uint8_t key_num)
 {
     panel_frame_t panel_frame = {};
 
-    panel_frame.panel_tx_head       = 0xAA;
-    panel_frame.panel_tx_type       = 0x01;
-    panel_frame.panel_tx_length     = 0x06;
-    panel_frame.panel_info.src_addr = m_addr;
-    panel_frame.panel_info.level    = 0x00;
-    panel_frame.panel_info.status   = m_status;
-    panel_frame.panel_info.key_num  = key_num;
+    panel_frame.panel_tx_head        = 0xAA;
+    panel_frame.panel_tx_type        = 0x01;
+    panel_frame.panel_tx_length      = 0x06;
+    panel_frame.panel_info.src_addr  = m_addr;
+    panel_frame.panel_info.level     = 0x00;
+    panel_frame.panel_info.status    = m_status;
+    panel_frame.panel_info.key_num   = key_num;
     panel_frame.panel_info.reserve_1 = 0x00;
     panel_frame.panel_info.reserve_2 = 0x00;
-    panel_frame.panel_tx_crc = frame_crc(reinterpret_cast<uint8_t *>(&panel_frame.panel_info), panel_frame.panel_tx_length);
-    panel_frame.panel_tx_tail_1 = 0x0D;
-    panel_frame.panel_tx_tail_2 = 0x0A;
+    panel_frame.panel_tx_crc         = frame_crc(reinterpret_cast<uint8_t *>(&panel_frame.panel_info), panel_frame.panel_tx_length);
+    panel_frame.panel_tx_tail_1      = 0x0D;
+    panel_frame.panel_tx_tail_2      = 0x0A;
     emit sendSimState(panel_frame);
 }

@@ -303,7 +303,7 @@ const QByteArray AppProtocolSimState::BilidPanelRecvFrame()
     my_panel_tx_buf.ft_1           = 0x0D;
     my_panel_tx_buf.ft_2           = 0x0A;
     QByteArray sendData(reinterpret_cast<const char *>(&my_panel_tx_buf), sizeof(my_panel_tx_buf));
-    qDebug() << "Panel Tx Data (Hex):" << sendData.toHex(' ');
+    // qDebug() << "Panel Tx Data (Hex):" << sendData.toHex(' ');
     return QByteArray(reinterpret_cast<const char *>(&my_panel_tx_buf), sizeof(my_panel_tx_buf));
 }
 

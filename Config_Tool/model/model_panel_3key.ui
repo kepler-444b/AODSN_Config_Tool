@@ -42,7 +42,7 @@
     <number>0</number>
    </property>
    <item row="0" column="0">
-    <widget class="QPushButton" name="key_3">
+    <widget class="QPushButton" name="key_2">
      <property name="minimumSize">
       <size>
        <width>66</width>
@@ -66,12 +66,12 @@
       <string>TextLabel</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignmentFlag::AlignCenter</set>
      </property>
     </widget>
    </item>
    <item row="0" column="1">
-    <widget class="QPushButton" name="key_2">
+    <widget class="QPushButton" name="key_3">
      <property name="minimumSize">
       <size>
        <width>66</width>

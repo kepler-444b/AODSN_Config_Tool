@@ -91,7 +91,7 @@ void MainWindow::on_debug_triggered()
 // 软件版本
 void MainWindow::on_ver_triggered()
 {
-    QString currentVersion = "v0.6";
+    QString currentVersion = "v0.7";
     QString downloadUrl    = "https://gitee.com/jokershudongsheng/ADSON_Release/releases";
 
     QString infoText = QString(
